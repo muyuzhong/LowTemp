@@ -84,7 +84,22 @@ const postPreviews = Object.fromEntries(
     <ClientRouter />
   </head>
   <body>
-    {thermometer && <div class="thermometer" data-initial={temp ?? ''} aria-hidden="true" />}
+    {thermometer && (
+      <div class="thermometer" data-initial={temp ?? ''} aria-hidden="true">
+        <div class="thermometer-gauge">
+          <div class="thermometer-fill" />
+          <div class="thermometer-cursor">
+            <span class="thermometer-pin" />
+            <span class="thermometer-readout mono" id="thermometer-readout" />
+          </div>
+          <div class="thermometer-ticks">
+            {Array.from({ length: 40 }).map((_, i) => (
+              <span class="tick-bar" data-tick-idx={i} />
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
     {rail && <ColdRail text={rail} />}
     <div class="shell">
       <SiteHeader />
@@ -138,19 +153,47 @@ const postPreviews = Object.fromEntries(
     <script type="application/json" id="post-previews-data" is:inline set:html={JSON.stringify(postPreviews)} />
 
     <script>
-      /* 阅读温度计(§1.2):JS 只写 --read-progress,颜色由 CSS 完成;
-         hover 读数 = 初温随阅读深度降 2°C。bar 每次重新查询,避免引用过期 DOM */
+      /* 阅读温度计(§1.2 + ObsidianUI Glowing Scroll Gauge):
+         动态更新 --read-progress，微刻度条根据距离计算发光高度与透明度，游标投影实时温度与百分比 */
+      let gaugeTimer: number | undefined;
       const updateThermometer = () => {
-        const bar = document.querySelector<HTMLElement>('.thermometer');
-        if (!bar) return;
+        const gauge = document.querySelector<HTMLElement>('.thermometer');
+        if (!gauge) return;
         const h = document.documentElement;
         const max = h.scrollHeight - h.clientHeight;
-        const p = max > 0 ? Math.min(1, scrollY / max) : 0;
+        const p = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
         h.style.setProperty('--read-progress', String(p));
-        const initial = parseFloat(bar.dataset.initial ?? '');
+
+        const initial = parseFloat(gauge.dataset.initial ?? '');
+        const readout = document.getElementById('thermometer-readout');
         if (!Number.isNaN(initial)) {
-          bar.title = `阅读深度 · ${(initial - 2 * p).toFixed(1)}°C`;
+          const currentT = (initial - 2 * p).toFixed(1);
+          const percent = Math.round(p * 100);
+          gauge.title = `阅读深度 · ${currentT}°C · ${percent}%`;
+          if (readout) readout.textContent = `${currentT}°C · ${percent}%`;
         }
+
+        // 微刻度条高亮均衡器 (Equalizer Glow Ticks)
+        const ticks = gauge.querySelectorAll<HTMLElement>('.tick-bar');
+        const total = ticks.length;
+        if (total > 0) {
+          const activeIdx = p * (total - 1);
+          ticks.forEach((tick, i) => {
+            const dist = Math.abs(i - activeIdx);
+            if (dist < 3.5) {
+              const glow = (1 - dist / 3.5).toFixed(2);
+              tick.style.setProperty('--tick-glow', glow);
+            } else {
+              tick.style.removeProperty('--tick-glow');
+            }
+          });
+        }
+
+        gauge.classList.add('scrolling');
+        if (gaugeTimer) clearTimeout(gaugeTimer);
+        gaugeTimer = window.setTimeout(() => {
+          gauge.classList.remove('scrolling');
+        }, 1200);
       };
 
       /* 1. 站内链接即刻悬停预览卡片 (Inspired by Gwern) */

@@ -1,0 +1,195 @@
+---
+/* LowTemp Notes — ArrowFillBtn (灵感源自 ObsidianUI Arrow Fill Button)
+ * 纯 CSS 矢量裁剪 (clip-path: inset) 与双重 SVG 穿梭箭头
+ */
+interface Props {
+  href?: string;
+  variant?: 'accent' | 'teal' | 'subtle';
+  class?: string;
+  target?: string;
+  rel?: string;
+  type?: 'button' | 'submit' | 'reset';
+  id?: string;
+}
+
+const {
+  href,
+  variant = 'accent',
+  class: className = '',
+  target,
+  rel,
+  type = 'button',
+  id,
+} = Astro.props;
+
+const Tag = href ? 'a' : 'button';
+---
+
+<Tag
+  href={href}
+  type={!href ? type : undefined}
+  target={target}
+  rel={rel}
+  id={id}
+  class:list={['lt-arrow-fill-btn', `variant-${variant}`, className]}
+>
+  <span class="lt-arrow-fill-btn__text"><slot /></span>
+
+  <span aria-hidden="true" class="lt-arrow-fill-btn__circle">
+    <span class="lt-arrow-fill-btn__circle-label"><slot /></span>
+    <span class="lt-arrow-fill-btn__icon-wrapper">
+      <svg
+        viewBox="0 0 10 10"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        class="lt-arrow-fill-btn__icon"
+      >
+        <!-- 第一个箭头：初始在左侧隐藏(-140%)，hover 时滑入中心 -->
+        <path
+          fill-rule="evenodd"
+          clip-rule="evenodd"
+          d="M0 5.625L7.625 5.625L4.125 9.125L5 10L10 5L5 0L4.125 0.875L7.625 4.375L0 4.375L0 5.625Z"
+          class="lt-arrow-fill-btn__path lt-arrow-fill-btn__path-in"
+        />
+        <!-- 第二个箭头：初始在中心，hover 时向右滑出(+140%) -->
+        <path
+          fill-rule="evenodd"
+          clip-rule="evenodd"
+          d="M0 5.625L7.625 5.625L4.125 9.125L5 10L10 5L5 0L4.125 0.875L7.625 4.375L0 4.375L0 5.625Z"
+          class="lt-arrow-fill-btn__path lt-arrow-fill-btn__path-out"
+        />
+      </svg>
+    </span>
+  </span>
+</Tag>
+
+<style>
+  .lt-arrow-fill-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+    padding-left: 18px;
+    padding-right: 44px;
+    position: relative;
+    width: fit-content;
+    border-radius: 999px;
+    background: var(--bg-1);
+    color: var(--ink-0);
+    border: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-rendering: geometricPrecision;
+    white-space: nowrap;
+    overflow: hidden;
+    text-decoration: none;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .lt-arrow-fill-btn:hover {
+    border-color: rgba(139, 130, 217, 0.4);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  }
+
+  .lt-arrow-fill-btn__text {
+    position: relative;
+    z-index: 1;
+    transition: opacity 0.2s ease;
+  }
+
+  /* 裁剪小圆圈（未 hover 时仅为右侧小箭头圆盘） */
+  .lt-arrow-fill-btn__circle {
+    clip-path: inset(3px 3px 3px calc(100% - 33px) round 999px);
+    position: absolute;
+    inset: -1px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    padding-left: 18px;
+    padding-right: 44px;
+    z-index: 2;
+    transition: clip-path 0.45s cubic-bezier(0.785, 0.135, 0.15, 0.86),
+                background-color 0.45s cubic-bezier(0.785, 0.135, 0.15, 0.86),
+                color 0.45s cubic-bezier(0.785, 0.135, 0.15, 0.86);
+    pointer-events: none;
+  }
+
+  .lt-arrow-fill-btn__circle-label {
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+  }
+
+  /* 变体颜色 */
+  .variant-accent .lt-arrow-fill-btn__circle {
+    background-color: var(--accent);
+    color: #0b0d12;
+  }
+  .variant-teal .lt-arrow-fill-btn__circle {
+    background-color: var(--teal);
+    color: #0b0d12;
+  }
+  .variant-subtle .lt-arrow-fill-btn__circle {
+    background-color: var(--bg-2);
+    color: var(--ink-0);
+  }
+
+  .lt-arrow-fill-btn__icon-wrapper {
+    width: 12px;
+    height: 12px;
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .lt-arrow-fill-btn__icon {
+    width: 10px;
+    height: 10px;
+    display: block;
+    position: relative;
+  }
+
+  .lt-arrow-fill-btn__path {
+    transition: transform 0.45s cubic-bezier(0.785, 0.135, 0.15, 0.86);
+    transform-origin: center center;
+    fill: currentColor;
+  }
+
+  /* 初始状态：path-in 在左侧隐藏 */
+  .lt-arrow-fill-btn__path-in {
+    transform: translateX(-140%) scale(0.6);
+  }
+  /* 初始状态：path-out 在中心可见 */
+  .lt-arrow-fill-btn__path-out {
+    transform: translateX(0) scale(1);
+  }
+
+  /* Hover 状态：clip-path 展开铺满整个胶囊，文字与背景色完全反转 */
+  .lt-arrow-fill-btn:is(:hover, :focus-visible) .lt-arrow-fill-btn__circle {
+    clip-path: inset(0 round 999px);
+  }
+
+  .lt-arrow-fill-btn:is(:hover, :focus-visible) .lt-arrow-fill-btn__path-in {
+    transform: translateX(0) scale(1);
+  }
+
+  .lt-arrow-fill-btn:is(:hover, :focus-visible) .lt-arrow-fill-btn__path-out {
+    transform: translateX(140%) scale(0.6);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lt-arrow-fill-btn__circle,
+    .lt-arrow-fill-btn__path {
+      transition: none;
+    }
+  }
+</style>

@@ -1,28 +1,52 @@
 ---
-/* LowTemp Notes — Command Palette (全局命令面板与极速检索) */
+/* LowTemp Notes — Command Palette (升级版 Apple Spotlight 全局命令中枢与极速检索)
+ * 汲取 ObsidianUI Apple Spotlight 弹簧动画、快捷动作胶囊与滑动 Chevron 交互
+ */
 ---
 
 <div id="cmd-palette" class="cmd-palette" aria-hidden="true">
   <div class="cmd-backdrop"></div>
   <div class="cmd-card mono">
+    <!-- Spotlight 主搜索栏 -->
     <div class="cmd-header">
-      <svg class="cmd-search-icon" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="7" cy="7" r="5" />
-        <path d="M11 11L14.5 14.5" />
-      </svg>
+      <div class="cmd-search-icon-box">
+        <svg class="cmd-search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="7" cy="7" r="5" />
+          <path d="M11 11L14.5 14.5" />
+        </svg>
+      </div>
+
       <input
         type="text"
         id="cmd-input"
         class="cmd-input"
-        placeholder="搜索全站文章、项目、日志，或输入指令 (>主题, >禅定)..."
+        placeholder="搜索全站文章、项目、日志，或执行指令..."
         autocomplete="off"
         spellcheck="false"
         aria-label="全站搜索命令"
       />
-      <button type="button" class="cmd-close-btn" aria-label="关闭搜索">ESC</button>
+
+      <!-- Apple Spotlight 风格快捷操作胶囊组 (Shortcut Buttons) -->
+      <div class="cmd-shortcuts-group" aria-label="快捷指令">
+        <button type="button" class="cmd-shortcut-chip" data-action="theme" title="切换深色/浅色主题 (T)">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="4"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
+          <span>主题</span>
+        </button>
+        <button type="button" class="cmd-shortcut-chip" data-action="zen" title="禅定聚焦阅读模式 (Z)">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="7" stroke-dasharray="2 3"/></svg>
+          <span>禅定</span>
+        </button>
+        <button type="button" class="cmd-shortcut-chip" data-action="rss" title="RSS 订阅源">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 2a12 12 0 0 1 12 12M2 6a8 8 0 0 1 8 8"/><circle cx="3" cy="13" r="1"/></svg>
+          <span>RSS</span>
+        </button>
+        <button type="button" class="cmd-close-btn" aria-label="关闭搜索">ESC</button>
+      </div>
     </div>
 
+    <!-- Magnet Tabs 磁吸分类过滤栏 -->
     <div class="cmd-filter-tabs" id="cmd-filter-tabs">
+      <div class="cmd-tab-glider" id="cmd-tab-glider"></div>
       <button type="button" class="cmd-tab active" data-filter="all">全部</button>
       <button type="button" class="cmd-tab" data-filter="writing">文章</button>
       <button type="button" class="cmd-tab" data-filter="project">项目</button>
@@ -30,23 +54,28 @@
       <button type="button" class="cmd-tab" data-filter="action">指令</button>
     </div>
 
+    <!-- Spotlight 结果列表容器 -->
     <div class="cmd-results" id="cmd-results" role="listbox">
       <!-- 动态渲染搜索结果与默认列表 -->
     </div>
 
+    <!-- 底部状态与快捷键导航指南 -->
     <div class="cmd-footer">
       <div class="cmd-hints">
         <span><kbd>↑</kbd><kbd>↓</kbd> 选择</span>
         <span><kbd>↵</kbd> 打开</span>
         <span><kbd>Esc</kbd> 退出</span>
       </div>
-      <div class="cmd-meta">低温极速检索</div>
+      <div class="cmd-meta">
+        <span class="cmd-status-indicator"></span>
+        低温极速检索 · SPOTLIGHT v2
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-  /* 全局命令面板与极速检索控制器 */
+  /* 全局命令面板与极速检索控制器 (Spotlight + Magnet Tabs) */
   interface SearchItem {
     type: 'writing' | 'project' | 'log' | 'action';
     id: string;
@@ -99,6 +128,8 @@
         const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
         root.dataset.theme = next;
         localStorage.setItem('theme', next);
+        const btn = document.getElementById('theme-toggle');
+        if (btn) btn.textContent = next === 'light' ? '深色' : '浅色';
       },
     },
     {
@@ -113,7 +144,6 @@
         if (zenBtn) {
           zenBtn.click();
         } else {
-          // 若不在文章内，跳转至最新文章
           window.location.href = '/writing/ltn-024-skill-evaluation/';
         }
       },
@@ -143,7 +173,22 @@
     },
   ];
 
-  // 渲染搜索结果
+  // 图标 SVG 映射 (Apple Spotlight 风格条目图标)
+  const getIconSvg = (type: string) => {
+    switch (type) {
+      case 'writing':
+        return `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h8a2 2 0 0 1 2 2v10H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M5 6h6M5 9h4"/></svg>`;
+      case 'project':
+        return `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2v4l-3.5 6A1.5 1.5 0 0 0 3.8 14h8.4a1.5 1.5 0 0 0 1.3-2L10 6V2"/><path d="M5 2h6M4.5 10h7"/></svg>`;
+      case 'log':
+        return `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/></svg>`;
+      case 'action':
+      default:
+        return `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="8,1 3,9 8,9 7,15 13,7 8,7"/></svg>`;
+    }
+  };
+
+  // 渲染搜索结果 (ObsidianUI Card + Sliding Chevron)
   const renderResults = () => {
     const resultsContainer = document.getElementById('cmd-results');
     const input = document.getElementById('cmd-input') as HTMLInputElement;
@@ -162,17 +207,14 @@
       } else if (activeFilter === 'log') {
         list = searchIndex.filter((item) => item.type === 'log');
       } else {
-        // 默认总览：快捷指令 + 最新文章
         const actions = getActions().slice(0, 3);
         const recentWriting = searchIndex.filter((item) => item.type === 'writing').slice(0, 4);
         list = [...actions, ...recentWriting];
       }
     } else {
-      // 模糊匹配
       const allItems = [...getActions(), ...searchIndex];
       list = allItems.filter((item) => {
         if (activeFilter !== 'all' && item.type !== activeFilter) return false;
-
         const text = `${item.id} ${item.title} ${item.subtitle || ''} ${item.excerpt || ''} ${(item.tags || []).join(' ')} ${item.body || ''}`.toLowerCase();
         return text.includes(query);
       });
@@ -200,15 +242,25 @@
             data-index="${idx}"
             aria-selected="${isSelected}"
           >
-            <div class="cmd-item-head">
-              <span class="cmd-type-badge ${item.type}">${item.category || item.type.toUpperCase()}</span>
-              <span class="cmd-item-id">${item.id}</span>
-              ${item.temp ? `<span class="cmd-item-temp">${item.temp}</span>` : ''}
-              ${item.status ? `<span class="cmd-item-status">${item.status}</span>` : ''}
+            <div class="cmd-item-icon-box ${item.type}">
+              ${getIconSvg(item.type)}
             </div>
-            <div class="cmd-item-title">${item.title}</div>
-            ${item.subtitle ? `<div class="cmd-item-sub">${item.subtitle}</div>` : ''}
-            ${item.excerpt ? `<div class="cmd-item-excerpt">${item.excerpt}</div>` : ''}
+            <div class="cmd-item-content">
+              <div class="cmd-item-head">
+                <span class="cmd-type-badge ${item.type}">${item.category || item.type.toUpperCase()}</span>
+                <span class="cmd-item-id">${item.id}</span>
+                ${item.temp ? `<span class="cmd-item-temp">${item.temp}</span>` : ''}
+                ${item.status ? `<span class="cmd-item-status">${item.status}</span>` : ''}
+              </div>
+              <div class="cmd-item-title">${item.title}</div>
+              ${item.subtitle ? `<div class="cmd-item-sub">${item.subtitle}</div>` : ''}
+              ${item.excerpt ? `<div class="cmd-item-excerpt">${item.excerpt}</div>` : ''}
+            </div>
+            <div class="cmd-item-arrow" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 3l5 5-5 5" />
+              </svg>
+            </div>
           </div>
         `;
       })
@@ -218,22 +270,47 @@
     activeEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
+  // Magnet Tabs 滑块更新函数
+  const updateMagnetGlider = (targetTab?: HTMLElement) => {
+    const tabsBar = document.getElementById('cmd-filter-tabs');
+    const glider = document.getElementById('cmd-tab-glider');
+    if (!tabsBar || !glider) return;
+
+    const currentTab = targetTab || tabsBar.querySelector<HTMLElement>('.cmd-tab.active');
+    if (!currentTab) {
+      glider.style.opacity = '0';
+      return;
+    }
+
+    const tabRect = currentTab.getBoundingClientRect();
+    const barRect = tabsBar.getBoundingClientRect();
+
+    const left = tabRect.left - barRect.left + tabsBar.scrollLeft;
+    const width = tabRect.width;
+
+    glider.style.opacity = '1';
+    glider.style.transform = `translateX(${left}px)`;
+    glider.style.width = `${width}px`;
+  };
+
   const openPalette = async () => {
     const palette = document.getElementById('cmd-palette');
     const input = document.getElementById('cmd-input') as HTMLInputElement;
     if (!palette) return;
 
-    await loadIndex();
     selectedIndex = 0;
-
     palette.classList.add('visible');
     palette.setAttribute('aria-hidden', 'false');
 
+    renderResults();
     setTimeout(() => {
       input?.focus();
       input?.select();
-      renderResults();
-    }, 60);
+      updateMagnetGlider();
+    }, 40);
+
+    await loadIndex();
+    renderResults();
   };
 
   const closePalette = () => {
@@ -253,6 +330,7 @@
 
     const palette = document.getElementById('cmd-palette');
     const input = document.getElementById('cmd-input') as HTMLInputElement;
+    const filterBar = document.getElementById('cmd-filter-tabs');
 
     // 搜索框输入
     input?.addEventListener('input', () => {
@@ -260,15 +338,42 @@
       renderResults();
     });
 
-    // 过滤标签切换
-    document.querySelectorAll('.cmd-tab').forEach((tab) => {
+    // 快捷动作胶囊点击 (Shortcut chips)
+    palette?.querySelectorAll<HTMLButtonElement>('.cmd-shortcut-chip').forEach((chip) => {
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = chip.dataset.action;
+        closePalette();
+        if (action === 'theme') {
+          const item = getActions().find((a) => a.id === 'ACT-THEME');
+          item?.handler?.();
+        } else if (action === 'zen') {
+          const item = getActions().find((a) => a.id === 'ACT-ZEN');
+          item?.handler?.();
+        } else if (action === 'rss') {
+          window.location.href = '/rss.xml';
+        }
+      });
+    });
+
+    // 磁吸标签栏 (Magnet Tabs) 鼠标交互与切换
+    const tabs = filterBar?.querySelectorAll<HTMLElement>('.cmd-tab');
+    tabs?.forEach((tab) => {
+      tab.addEventListener('mouseenter', () => {
+        updateMagnetGlider(tab);
+      });
       tab.addEventListener('click', () => {
-        document.querySelectorAll('.cmd-tab').forEach((t) => t.classList.remove('active'));
+        tabs.forEach((t) => t.classList.remove('active'));
         tab.classList.add('active');
         activeFilter = tab.getAttribute('data-filter') || 'all';
         selectedIndex = 0;
         renderResults();
+        updateMagnetGlider(tab);
       });
+    });
+
+    filterBar?.addEventListener('mouseleave', () => {
+      updateMagnetGlider();
     });
 
     // 搜索框按键导航

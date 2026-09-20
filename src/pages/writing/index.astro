@@ -24,31 +24,37 @@ const statusCounts = {
       <p class="post-sub">完整结论、探索笔记、建造记录,以及少量别的。</p>
     </div>
 
-    <!-- 灵感 1: 物态相变谱系过滤 (Inspired by Maggie Appleton) -->
+    <!-- 灵感 1: 物态相变谱系过滤 (Inspired by Maggie Appleton & ObsidianUI Magnet Tabs) -->
     <div class="filter-group">
-      <div class="filter category-filter" role="group" aria-label="按主题过滤">
+      <div class="filter category-filter magnet-tabs-bar" role="group" aria-label="按主题过滤">
         <span class="filter-label mono">主题：</span>
-        <button class="active" data-cat="all">全部主题</button>
-        {cats.map((c) => <button data-cat={c}>{CATEGORY_LABEL[c]}</button>)}
+        <div class="magnet-track">
+          <span class="magnet-pill" aria-hidden="true"></span>
+          <button class="active" data-cat="all">全部主题</button>
+          {cats.map((c) => <button data-cat={c}>{CATEGORY_LABEL[c]}</button>)}
+        </div>
       </div>
 
-      <div class="filter phase-filter" role="group" aria-label="按物态过滤">
+      <div class="filter phase-filter magnet-tabs-bar" role="group" aria-label="按物态过滤">
         <span class="filter-label mono">物态：</span>
-        <button class="active phase-btn" data-phase="all">全部物态</button>
-        <button class="phase-btn" data-phase="stable" style="--dot-c: var(--teal)">
-          <span class="phase-dot" style="background: var(--teal)"></span> 4.2°C 结晶 ({statusCounts.stable})
-        </button>
-        <button class="phase-btn" data-phase="tested" style="--dot-c: var(--accent)">
-          <span class="phase-dot" style="background: var(--accent)"></span> 8.4°C 验证 ({statusCounts.tested})
-        </button>
-        <button class="phase-btn" data-phase="exploring" style="--dot-c: var(--blue)">
-          <span class="phase-dot" style="background: var(--blue)"></span> 14.0°C 探索 ({statusCounts.exploring})
-        </button>
-        {statusCounts.draft > 0 && (
-          <button class="phase-btn" data-phase="draft" style="--dot-c: var(--mauve)">
-            <span class="phase-dot" style="background: var(--mauve)"></span> 19.5°C 气态 ({statusCounts.draft})
+        <div class="magnet-track">
+          <span class="magnet-pill" aria-hidden="true"></span>
+          <button class="active phase-btn" data-phase="all">全部物态</button>
+          <button class="phase-btn" data-phase="stable" style="--dot-c: var(--teal)">
+            <span class="phase-dot" style="background: var(--teal)"></span> 4.2°C 结晶 ({statusCounts.stable})
           </button>
-        )}
+          <button class="phase-btn" data-phase="tested" style="--dot-c: var(--accent)">
+            <span class="phase-dot" style="background: var(--accent)"></span> 8.4°C 验证 ({statusCounts.tested})
+          </button>
+          <button class="phase-btn" data-phase="exploring" style="--dot-c: var(--blue)">
+            <span class="phase-dot" style="background: var(--blue)"></span> 14.0°C 探索 ({statusCounts.exploring})
+          </button>
+          {statusCounts.draft > 0 && (
+            <button class="phase-btn" data-phase="draft" style="--dot-c: var(--mauve)">
+              <span class="phase-dot" style="background: var(--mauve)"></span> 19.5°C 气态 ({statusCounts.draft})
+            </button>
+          )}
+        </div>
       </div>
     </div>
 
@@ -61,7 +67,7 @@ const statusCounts = {
   </div>
 
   <script>
-    /* 双维矩阵过滤(主题 x 物态相变). astro:page-load:视图切换后重新绑定新 DOM */
+    /* 双维矩阵过滤(主题 x 物态相变) + Magnet Tabs 磁吸微交互 */
     document.addEventListener('astro:page-load', () => {
       const catBtns = document.querySelectorAll<HTMLButtonElement>('.category-filter button');
       const phaseBtns = document.querySelectorAll<HTMLButtonElement>('.phase-filter button');
@@ -83,11 +89,44 @@ const statusCounts = {
         if (empty) empty.style.display = visible === 0 ? 'block' : 'none';
       };
 
+      // 磁吸滑块物理跟踪函数 (Magnet Pill Glide)
+      const setupMagnetTrack = (track: HTMLElement) => {
+        const pill = track.querySelector<HTMLElement>('.magnet-pill');
+        if (!pill) return;
+        const buttons = track.querySelectorAll<HTMLButtonElement>('button');
+
+        const updatePill = (btn?: HTMLButtonElement) => {
+          const target = btn || track.querySelector<HTMLButtonElement>('button.active');
+          if (!target) {
+            pill.style.opacity = '0';
+            return;
+          }
+          const tRect = target.getBoundingClientRect();
+          const trRect = track.getBoundingClientRect();
+          pill.style.opacity = '1';
+          pill.style.left = `${tRect.left - trRect.left + track.scrollLeft}px`;
+          pill.style.width = `${tRect.width}px`;
+          pill.style.height = `${tRect.height}px`;
+        };
+
+        buttons.forEach((b) => {
+          b.addEventListener('mouseenter', () => updatePill(b));
+        });
+        track.addEventListener('mouseleave', () => updatePill());
+        updatePill();
+
+        return updatePill;
+      };
+
+      const tracks = document.querySelectorAll<HTMLElement>('.magnet-track');
+      const updaters = Array.from(tracks).map(setupMagnetTrack);
+
       catBtns.forEach((b) =>
         b.addEventListener('click', () => {
           catBtns.forEach((x) => x.classList.toggle('active', x === b));
           activeCat = b.dataset.cat || 'all';
           applyFilters();
+          updaters[0]?.(b);
         })
       );
 
@@ -96,6 +135,7 @@ const statusCounts = {
           phaseBtns.forEach((x) => x.classList.toggle('active', x === b));
           activePhase = b.dataset.phase || 'all';
           applyFilters();
+          updaters[1]?.(b);
         })
       );
     });

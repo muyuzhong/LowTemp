@@ -66,23 +66,86 @@ hr { border: 0; border-top: 1px solid var(--line); }
   white-space: nowrap;
 }
 
-/* ---------- 阅读温度计（§1.2） ---------- */
+/* ---------- 阅读温度计（§1.2 + ObsidianUI Glowing Scroll Gauge） ---------- */
 .thermometer {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 6px; /* 加高 hover 热区,线本身仍是 1px */
-  background: linear-gradient(var(--line), var(--line)) top / 100% 1px no-repeat;
-  z-index: 20;
+  height: 8px;
+  z-index: 9999;
+  background: rgba(11, 13, 18, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
-.thermometer::after {
-  content: "";
-  display: block;
-  height: 1.5px;
-  width: calc(var(--read-progress) * 100%);
+.thermometer-gauge {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.thermometer-fill {
+  position: absolute;
+  top: 0; left: 0;
+  height: 2px;
+  width: calc(var(--read-progress, 0) * 100%);
   background: linear-gradient(90deg, var(--blue), var(--accent));
+  transition: width 0.05s linear;
 }
-@media (max-width: 640px) {
-  .thermometer::after { height: 2px; }
+.thermometer-cursor {
+  position: absolute;
+  top: 0;
+  left: calc(var(--read-progress, 0) * 100%);
+  transform: translateX(-50%);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: left 0.05s linear;
+}
+.thermometer-pin {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent), 0 0 3px #fff;
+  transform: translateY(-2px);
+}
+.thermometer-readout {
+  position: absolute;
+  top: 12px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  color: var(--accent);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(139, 130, 217, 0.2);
+  pointer-events: none;
+}
+.thermometer.scrolling .thermometer-readout,
+.thermometer:hover .thermometer-readout {
+  opacity: 1;
+  transform: translateY(0);
+}
+.thermometer-ticks {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+  padding: 0 6px;
+}
+.tick-bar {
+  display: block;
+  width: 1px;
+  height: calc(2.5px + var(--tick-glow, 0) * 4px);
+  background: color-mix(in srgb, rgba(255, 255, 255, 0.12), var(--accent) calc(var(--tick-glow, 0) * 100%));
+  transition: height 0.12s ease, background 0.12s ease;
 }
 
 /* ---------- 头部导航 ---------- */
@@ -425,7 +488,7 @@ hr { border: 0; border-top: 1px solid var(--line); }
 .archive-tags { color: var(--mauve); }
 .temp { font-variant-numeric: tabular-nums; }
 
-/* 双维过滤器 (主题 x 物态相变谱系) */
+/* 双维过滤器 (主题 x 物态相变谱系) + ObsidianUI Magnet Tabs */
 .filter-group {
   display: flex;
   flex-direction: column;
@@ -434,7 +497,7 @@ hr { border: 0; border-top: 1px solid var(--line); }
   padding: 14px 18px;
   background: var(--bg-1);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 8px;
 }
 .filter {
   display: flex;
@@ -449,18 +512,50 @@ hr { border: 0; border-top: 1px solid var(--line); }
   letter-spacing: 0.08em;
   min-width: 48px;
 }
-.filter button {
-  background: none; border: 1px solid transparent; padding: 3px 8px; cursor: pointer;
-  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em;
-  color: var(--ink-2);
-  border-radius: 2px;
-  transition: color 200ms, background-color 200ms, border-color 200ms;
-}
-.filter button:hover { color: var(--ink-0); }
-.filter button.active {
-  color: var(--ink-0);
+.magnet-track {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
   background: var(--bg-0);
   border: 1px solid var(--line);
+  overflow-x: auto;
+  max-width: 100%;
+}
+.magnet-pill {
+  position: absolute;
+  border-radius: 999px;
+  background: var(--bg-1);
+  border: 1px solid rgba(139, 130, 217, 0.3);
+  pointer-events: none;
+  opacity: 0;
+  transition: left 0.24s cubic-bezier(0.16, 1, 0.3, 1), width 0.24s cubic-bezier(0.16, 1, 0.3, 1), height 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 0;
+}
+.filter button {
+  position: relative;
+  z-index: 1;
+  background: none;
+  border: 1px solid transparent;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  border-radius: 999px;
+  transition: color 180ms ease;
+  white-space: nowrap;
+}
+.filter button:hover {
+  color: var(--ink-0);
+}
+.filter button.active {
+  color: var(--ink-0);
+  font-weight: 500;
 }
 .phase-btn {
   display: inline-flex;
@@ -469,7 +564,6 @@ hr { border: 0; border-top: 1px solid var(--line); }
 }
 .phase-btn.active {
   color: var(--dot-c, var(--accent)) !important;
-  border-color: var(--dot-c, var(--accent)) !important;
 }
 .phase-dot {
   width: 6px;
@@ -1508,10 +1602,10 @@ body.zen-mode .prose > *.zen-active {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 14vh;
+  padding-top: 12vh;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .cmd-palette.visible {
   opacity: 1;
@@ -1520,41 +1614,54 @@ body.zen-mode .prose > *.zen-active {
 .cmd-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(11, 13, 18, 0.72);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
 }
 .cmd-card {
   position: relative;
   z-index: 1;
-  width: 640px;
+  width: 680px;
   max-width: calc(100vw - 32px);
   background: var(--bg-1);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(112, 170, 166, 0.15);
+  border: 1px solid rgba(139, 130, 217, 0.22);
+  border-radius: 12px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(112, 170, 166, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  max-height: 72vh;
-  transform: scale(0.97) translateY(-8px);
-  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 75vh;
+  transform: scale(0.96) translateY(-12px);
+  filter: blur(8px);
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1), filter 260ms cubic-bezier(0.16, 1, 0.3, 1), opacity 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .cmd-palette.visible .cmd-card {
   transform: scale(1) translateY(0);
+  filter: blur(0px);
 }
 
 .cmd-header {
   display: flex;
   align-items: center;
-  padding: 14px 18px;
+  padding: 12px 18px;
   border-bottom: 1px solid var(--line);
   gap: 12px;
+  background: var(--bg-1);
+}
+.cmd-search-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--bg-0);
+  border: 1px solid var(--line);
+  color: var(--accent);
+  flex-shrink: 0;
 }
 .cmd-search-icon {
   display: block;
-  stroke: var(--accent);
-  flex-shrink: 0;
 }
 .cmd-input {
   flex: 1;
@@ -1564,19 +1671,48 @@ body.zen-mode .prose > *.zen-active {
   font-family: var(--font-mono);
   font-size: 14px;
   outline: none;
+  min-width: 0;
 }
 .cmd-input::placeholder {
   color: var(--ink-2);
   font-size: 13px;
 }
+.cmd-shortcuts-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.cmd-shortcut-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-0);
+  border: 1px solid var(--line);
+  color: var(--ink-1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cmd-shortcut-chip:hover {
+  background: var(--bg-2);
+  color: var(--accent);
+  border-color: rgba(139, 130, 217, 0.4);
+  transform: translateY(-1px);
+}
 .cmd-close-btn {
   background: var(--bg-0);
   border: 1px solid var(--line);
   color: var(--ink-2);
+  font-family: var(--font-mono);
   font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 2px;
+  padding: 4px 8px;
+  border-radius: 6px;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 .cmd-close-btn:hover {
   color: var(--ink-0);
@@ -1584,6 +1720,7 @@ body.zen-mode .prose > *.zen-active {
 }
 
 .cmd-filter-tabs {
+  position: relative;
   display: flex;
   gap: 6px;
   padding: 8px 16px;
@@ -1591,48 +1728,97 @@ body.zen-mode .prose > *.zen-active {
   border-bottom: 1px solid var(--line);
   overflow-x: auto;
 }
+.cmd-tab-glider {
+  position: absolute;
+  top: 8px;
+  height: calc(100% - 16px);
+  background: var(--bg-1);
+  border: 1px solid rgba(139, 130, 217, 0.25);
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), width 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
 .cmd-tab {
+  position: relative;
+  z-index: 1;
   background: transparent;
   border: 1px solid transparent;
   color: var(--ink-2);
   font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 2px;
+  padding: 4px 10px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: all 140ms ease;
+  transition: color 140ms ease;
   white-space: nowrap;
 }
 .cmd-tab:hover {
   color: var(--ink-0);
 }
 .cmd-tab.active {
-  background: var(--bg-1);
-  border-color: var(--line);
   color: var(--accent);
+  font-weight: 500;
 }
 
 .cmd-results {
   flex: 1;
   overflow-y: auto;
-  padding: 6px 0;
+  padding: 6px 8px;
+  max-height: 52vh;
 }
 .cmd-item {
-  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  margin-bottom: 2px;
+  border-radius: 8px;
   cursor: pointer;
-  border-left: 2px solid transparent;
-  transition: background 120ms ease, border-color 120ms ease;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
 }
 .cmd-item:hover,
 .cmd-item.selected {
-  background: color-mix(in srgb, var(--bg-1), var(--accent) 8%);
-  border-left-color: var(--accent);
+  background: color-mix(in srgb, var(--bg-1), var(--accent) 9%);
+  border-color: rgba(139, 130, 217, 0.25);
+  transform: translateX(2px);
+}
+.cmd-item-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--bg-0);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  transition: all 0.15s ease;
+}
+.cmd-item:hover .cmd-item-icon-box,
+.cmd-item.selected .cmd-item-icon-box {
+  border-color: rgba(139, 130, 217, 0.4);
+  color: var(--accent);
+  background: var(--bg-1);
+}
+.cmd-item-icon-box.writing { color: var(--accent); }
+.cmd-item-icon-box.project { color: var(--teal); }
+.cmd-item-icon-box.log { color: var(--blue); }
+.cmd-item-icon-box.action { color: var(--amber); }
+
+.cmd-item-content {
+  flex: 1;
+  min-width: 0;
 }
 .cmd-item-head {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 .cmd-type-badge {
   padding: 1px 5px;
@@ -1670,6 +1856,29 @@ body.zen-mode .prose > *.zen-active {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.cmd-item-arrow {
+  color: var(--ink-2);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease;
+  flex-shrink: 0;
+}
+.cmd-item:hover .cmd-item-arrow,
+.cmd-item.selected .cmd-item-arrow {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--accent);
+}
+.cmd-status-indicator {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--teal);
+  box-shadow: 0 0 6px var(--teal);
+  margin-right: 6px;
+}
+
 .cmd-empty {
   padding: 40px 20px;
   text-align: center;

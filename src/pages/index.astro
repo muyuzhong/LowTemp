@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import Crystal from '../components/Crystal.astro';
 import ArchiveItem from '../components/ArchiveItem.astro';
+import ArrowFillBtn from '../components/ArrowFillBtn.astro';
 import { fmtDate } from '../lib/temp';
 
 const writing = (await getCollection('writing')).sort(
@@ -27,8 +28,8 @@ const logs = (await getCollection('log')).sort(
       <p class="hero-sub">在噪声退去之后,<br />记录仍然成立的东西。</p>
       <p class="hero-tags mono">Agent 工程 · Coding Agent · RAG · 系统</p>
       <div class="hero-actions">
-        <a class="btn" href="/writing/">开始阅读</a>
-        <a class="btn" href="/projects/">查看项目</a>
+        <ArrowFillBtn href="/writing/" variant="accent">开始阅读</ArrowFillBtn>
+        <ArrowFillBtn href="/projects/" variant="teal">查看项目</ArrowFillBtn>
       </div>
     </div>
     <div>
