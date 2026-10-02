@@ -795,6 +795,312 @@ span.section-more { text-decoration: none; }
 .cmd-status-indicator { display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: var(--teal); }
 @media (max-width: 560px) { .cmd-meta { display: none; } }
 
+/* ---------- 深度文章扩展视觉组件：Figure、Architecture Diagram、Stat Grid ---------- */
+.diagram-figure {
+  margin: 2.4em 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-1);
+  overflow: hidden;
+}
+.diagram-container {
+  padding: 24px;
+}
+.diagram-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 14px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.diagram-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  font-weight: 500;
+}
+.diagram-title {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--ink-1);
+}
+.diagram-figure figcaption {
+  padding: 12px 20px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  border-top: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--bg-0) 60%, var(--bg-1));
+}
+
+/* Architecture Flow */
+.arch-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.arch-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-0);
+  padding: 16px 18px;
+}
+.card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.card-role {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.card-title {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-0);
+  margin-bottom: 4px;
+}
+.card-desc {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-1);
+  margin: 0;
+}
+
+/* Arrow */
+.flow-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 0;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.flow-arrow svg {
+  flex-shrink: 0;
+}
+.flow-arrow.flow-arrow-accent {
+  color: var(--accent);
+}
+.flow-arrow .arrow-label.highlight {
+  color: var(--teal);
+  font-weight: 500;
+}
+
+/* Nested Sandbox */
+.arch-subcard {
+  margin-top: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: var(--bg-1);
+  padding: 14px 16px;
+}
+.subcard-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.subcard-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-0);
+}
+.subcard-pill {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-2);
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--bg-2);
+}
+.subcard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+@media (max-width: 640px) {
+  .subcard-grid { grid-template-columns: 1fr; }
+}
+.col-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+}
+.col-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.col-list li {
+  margin-bottom: 4px;
+}
+.col-list li code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+.col-text {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-1);
+  margin: 0;
+}
+.subcard-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.distill-tag {
+  color: var(--teal);
+  font-weight: 600;
+  font-size: 11px;
+}
+.subcard-footer code {
+  color: var(--ink-1);
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+.badge-accent { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+.badge-host { background: color-mix(in srgb, var(--blue) 18%, transparent); color: var(--blue); }
+.badge-sandbox { background: color-mix(in srgb, var(--mauve) 18%, transparent); color: var(--mauve); }
+.badge-teal { background: color-mix(in srgb, var(--teal) 18%, transparent); color: var(--teal); }
+
+/* Stat Highlights Grid */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin: 1.8em 0 1.2em;
+}
+@media (max-width: 760px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 440px) {
+  .stat-grid { grid-template-columns: 1fr; }
+}
+.stat-card {
+  padding: 16px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-1);
+  text-align: left;
+}
+.stat-val {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--teal);
+  margin-bottom: 6px;
+}
+.stat-val.accent { color: var(--accent); }
+.stat-val.blue { color: var(--blue); }
+.stat-label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-0);
+  margin-bottom: 4px;
+}
+.stat-desc {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* Timeline Cards */
+.timeline-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 1.8em 0;
+}
+@media (max-width: 640px) {
+  .timeline-grid { grid-template-columns: 1fr; }
+}
+.timeline-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-1);
+  padding: 18px 20px;
+}
+.timeline-card.active {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent) 4%, var(--bg-1));
+}
+.timeline-date {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+  margin-bottom: 8px;
+}
+.timeline-card.active .timeline-date {
+  color: var(--accent);
+}
+.timeline-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-0);
+  margin-bottom: 10px;
+}
+.timeline-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-1);
+}
+.timeline-list li {
+  position: relative;
+  padding-left: 14px;
+  margin-bottom: 6px;
+}
+.timeline-list li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--ink-2);
+}
+.timeline-card.active .timeline-list li::before {
+  color: var(--accent);
+}
+.delta-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--teal);
+}
+
 /* ---------- 动效纪律 ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
