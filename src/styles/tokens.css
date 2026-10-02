@@ -1,41 +1,59 @@
 /* LowTemp Notes — design tokens (design.md §3) */
 :root {
-  --bg-0: #0b0d12;
-  --bg-1: #11141b;
-  --bg-2: #171b24;
-  --ink-0: #d8dce6;
-  --ink-1: #858b99;
-  --ink-2: #555c6b;
+  /* 深色（默认跟随系统，见 Base.astro 的防闪烁脚本） */
+  --bg-0: #0c0e12;
+  --bg-1: #12151b;
+  --bg-2: #181c24;
+  --ink-0: #d6dae3;
+  --ink-1: #8b91a0;
+  --ink-2: #6a7080;
+  --line: #20242d;
+  --line-soft: #181b22;
+
+  /* 唯一强调色 + 四个温度色（温度色只用于圆点与数值） */
   --accent: #8b82d9;
   --blue: #6e9fcb;
   --teal: #70aaa6;
-  --mauve: #77718f;
+  --mauve: #8a84a3;
   --red: #c1787a;
-  --line: #232833;
+
+  /* 聚焦阅读：当前行 → 邻行 → 其余行 的亮度梯度 */
+  --read-l1: color-mix(in srgb, var(--ink-0) 72%, var(--bg-0));
+  --read-l2: color-mix(in srgb, var(--ink-0) 52%, var(--bg-0));
+  --read-dim: color-mix(in srgb, var(--ink-0) 40%, var(--bg-0));
 
   --font-serif: "Source Han Serif SC", "Noto Serif SC", "Songti SC", serif;
   --font-sans: "Inter", "Source Han Sans SC", "Noto Sans SC", "PingFang SC",
-    "Microsoft YaHei", sans-serif;
+    "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
 
-  /* set by the reading thermometer on article pages (0..1) */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* 文章页阅读进度 0..1，由 reading-bar 写入 */
   --read-progress: 0;
 
   color-scheme: dark;
 }
 
 [data-theme="light"] {
-  --bg-0: #f2f1ed;
-  --bg-1: #e9e8e3;
-  --bg-2: #dfddd5;
-  --ink-0: #202227;
-  --ink-1: #525661;
-  --ink-2: #666a77;
+  --bg-0: #f7f8f9;
+  --bg-1: #eff1f3;
+  --bg-2: #e6e9ec;
+  --ink-0: #1d2026;
+  --ink-1: #565c68;
+  --ink-2: #6b717d;
+  --line: #e0e3e7;
+  --line-soft: #eaecef;
+
   --accent: #5d54a6;
   --blue: #3d709c;
   --teal: #3e7b77;
-  --mauve: #696380;
+  --mauve: #6f6a86;
   --red: #a45355;
-  --line: #d0cdc4;
+
+  --read-l1: color-mix(in srgb, var(--ink-0) 78%, var(--bg-0));
+  --read-l2: color-mix(in srgb, var(--ink-0) 62%, var(--bg-0));
+  --read-dim: color-mix(in srgb, var(--ink-0) 50%, var(--bg-0));
+
   color-scheme: light;
 }

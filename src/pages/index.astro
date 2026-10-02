@@ -1,144 +1,29 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
-import Crystal from '../components/Crystal.astro';
 import ArchiveItem from '../components/ArchiveItem.astro';
-import ArrowFillBtn from '../components/ArrowFillBtn.astro';
-import { fmtDate } from '../lib/temp';
+import ThermoStrip from '../components/ThermoStrip.astro';
 
 const writing = (await getCollection('writing')).sort(
   (a, b) => b.data.published.getTime() - a.data.published.getTime()
 );
-const featured = writing.filter((e) => e.data.featured).slice(0, 4);
-const shown = featured.length ? featured : writing.slice(0, 4);
-
-const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order).slice(0, 2);
-const logs = (await getCollection('log')).sort(
-  (a, b) => b.data.published.getTime() - a.data.published.getTime()
-).slice(0, 5);
+const latest = writing.slice(0, 8);
 ---
-<Base title="首页" rail="低温笔记 · 始于 2026">
-  <section class="hero">
-    <div>
-      <div class="hero-kicker mono">
-        <span class="breath" aria-hidden="true"></span>
-        LOWTEMP NOTES ────────────
-      </div>
-      <h1>低温笔记</h1>
-      <p class="hero-sub">在噪声退去之后,<br />记录仍然成立的东西。</p>
-      <p class="hero-tags mono">Agent 工程 · Coding Agent · RAG · 系统</p>
-      <div class="hero-actions">
-        <ArrowFillBtn href="/writing/" variant="accent">开始阅读</ArrowFillBtn>
-        <ArrowFillBtn href="/projects/" variant="teal">查看项目</ArrowFillBtn>
-      </div>
-    </div>
-    <div>
-      <Crystal />
-      <p class="crystal-caption mono">同心等温轨道 · 每一篇文章是一个物态质点 —— 可点击</p>
-    </div>
+<Base title="首页">
+  <section class="intro">
+    <h1>低温笔记</h1>
+    <p class="intro-sub">在噪声退去之后，<br />记录仍然成立的东西。</p>
+    <p class="intro-tags">Agent 工程 · Coding Agent · RAG · 系统</p>
+    <ThermoStrip entries={writing} />
   </section>
 
   <section class="section">
-    <div class="section-head">
-      <span class="section-title mono">当前研究 / 02</span>
-      <a class="section-more" href="/projects/">档案 →</a>
-    </div>
-    <a href="/projects/" style="color: inherit; text-decoration: none; display: block;">
-      <div class="research-card spotlight-card">
-        <h3>Coding Agent Harness</h3>
-        <p>研究面向真实代码库的上下文管理、最小变更与增量验证。</p>
-        <dl class="stat-rows mono">
-          <div class="row"><dt>状态</dt><dd>开发中</dd></div>
-          <div class="row"><dt>方向</dt><dd>AST / 语义上下文 / 安全变更</dd></div>
-          <div class="row"><dt>更新</dt><dd>2026.08</dd></div>
-        </dl>
-      </div>
-    </a>
-  </section>
-
-  <!-- 灵感 2: 开着车库门做研究 · 未解假设看板 (Inspired by Andy Matuschak) -->
-  <section class="section">
-    <div class="section-head">
-      <span class="section-title mono">验证中的假设 / 03</span>
-      <span class="section-more mono" style="opacity: 0.65; letter-spacing: 0.08em;">OPEN HYPOTHESES</span>
-    </div>
-    <div class="hypotheses-grid">
-      <div class="hypothesis-card spotlight-card">
-        <div class="hypo-meta mono">
-          <span class="hypo-id">HYPO-01</span>
-          <span class="hypo-temp" style="color: var(--teal)">7.2°C · 验证中</span>
-        </div>
-        <h4>基于作用域的 AST 符号级差分能否替代全量上下文重放？</h4>
-        <p>在多轮 Coding Agent 交互中，如果单次验证耗时超过 200ms，Agent 的自愈循环就会被打破。假设仅投影被修改符号的引用拓扑即可达到 99% 的静态自愈率。</p>
-        <div class="hypo-status mono">
-          <span class="hypo-badge">用例覆盖 18/24</span>
-          <span class="hypo-metric">耗时 28ms · 稳定</span>
-        </div>
-      </div>
-
-      <div class="hypothesis-card spotlight-card">
-        <div class="hypo-meta mono">
-          <span class="hypo-id">HYPO-02</span>
-          <span class="hypo-temp" style="color: var(--accent)">11.5°C · 假说形成</span>
-        </div>
-        <h4>长上下文注意力稀释是否存在不可逆的临界相变点？</h4>
-        <p>当历史输入中不相干噪声超过 60% 时，模型遵循初始硬性约束的失效率不是线性递增，而是呈现断崖式突变。严格控制输入端信噪比远胜于在输出端打补丁。</p>
-        <div class="hypo-status mono">
-          <span class="hypo-badge">基准测试中</span>
-          <span class="hypo-metric">64k/128k 边界</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="section-head">
-      <span class="section-title mono">精选文章</span>
-      <a class="section-more" href="/writing/">全部 →</a>
-    </div>
-    <ul class="archive">
-      {shown.map((e) => <ArchiveItem entry={e} />)}
+    <header class="section-head">
+      <h2>最新文章</h2>
+      {writing.length > latest.length && <a class="section-more" href="/writing/">全部 {writing.length} 篇</a>}
+    </header>
+    <ul class="entries">
+      {latest.map((e) => <ArchiveItem entry={e} />)}
     </ul>
-  </section>
-
-  <section class="section">
-    <div class="section-head">
-      <span class="section-title mono">项目档案</span>
-      <a class="section-more" href="/projects/">全部 →</a>
-    </div>
-    {projects.map((p) => (
-      <div class="lab">
-        <div class="lab-head">
-          <span class="lab-id mono">{p.data.id}</span>
-          <span class="mono" style="color: var(--ink-2)">{p.data.state}</span>
-        </div>
-        <h2><a href="/projects/" style="color: inherit;">{p.data.title}</a></h2>
-        <p class="lab-sub">{p.data.subtitle}</p>
-      </div>
-    ))}
-  </section>
-
-  <section class="section">
-    <div class="section-head">
-      <span class="section-title mono">最近日志</span>
-      <a class="section-more" href="/log/">全部 →</a>
-    </div>
-    {logs.map((l) => (
-      <div class="log-entry">
-        <span class="log-date">{fmtDate(l.data.published)}</span>
-        <p>{l.body}</p>
-      </div>
-    ))}
-  </section>
-
-  <section class="section">
-    <div class="section-head">
-      <span class="section-title mono">关于</span>
-      <a class="section-more" href="/about/">更多 →</a>
-    </div>
-    <p style="max-width: 560px; color: var(--ink-1);">
-      暮羽中。独立建造者与观察者。关注 Coding Agent、上下文工程与最小变更,
-      也记录少量关于认知与行动的思考。
-    </p>
   </section>
 </Base>

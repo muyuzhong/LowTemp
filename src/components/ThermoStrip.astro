@@ -1,0 +1,55 @@
+---
+/* 温度尺 — 首页的签名图形。
+   一根真正的温度尺:光谱色带(雾 → 结晶)+ 半度细刻度;每篇文章是一根立杆,
+   杆顶的圆点颜色 = 物态,杆高只用于错开同温度的文章。越确定,越靠右(越冷)。
+   数据即图形,纯 HTML/CSS。hover 杆会弹出站内预览。 */
+import { tempOf, fmtTemp, STATUS_COLOR } from '../lib/temp';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props { entries: CollectionEntry<'writing'>[] }
+const { entries } = Astro.props;
+
+const MAX = 20; // 左端 °C
+const MIN = 3; // 右端 °C
+const span = MAX - MIN;
+const pos = (t: number) => ((MAX - t) / span) * 100;
+const majors = [20, 16, 12, 8, 4];
+const halfDegrees = Math.round(span * 2);
+
+/* 同温度的杆向上错开 */
+const stack = new Map<number, number>();
+const pins = entries
+  .map((e) => ({ e, t: tempOf(e.data.status, e.data.temperature) }))
+  .filter((x): x is { e: CollectionEntry<'writing'>; t: number } => x.t != null)
+  .sort((a, b) => a.e.data.published.getTime() - b.e.data.published.getTime())
+  .map(({ e, t }) => {
+    const n = stack.get(t) ?? 0;
+    stack.set(t, n + 1);
+    const x = pos(t);
+    return { e, t, n, x, flip: x > 82 };
+  });
+const rows = Math.max(1, ...pins.map((p) => p.n + 1));
+---
+<div class="thermo" style={`--rows: ${rows}; --halves: ${halfDegrees}`} role="group" aria-label="文章温度分布">
+  <div class="thermo-pins">
+    {pins.map(({ e, t, n, x, flip }) => (
+      <a
+        class:list={['thermo-pin', { flip }]}
+        href={`/writing/${e.id}/`}
+        style={`left: ${x}%; --n: ${n}; --c: ${STATUS_COLOR[e.data.status]}`}
+        aria-label={`${e.data.id} ${e.data.title} ${fmtTemp(t)}`}
+      >
+        <span class="thermo-label">{e.data.id}<em>{fmtTemp(t)}</em></span>
+      </a>
+    ))}
+  </div>
+  <div class="thermo-band" aria-hidden="true"></div>
+  <div class="thermo-ticks" aria-hidden="true">
+    {majors.map((t) => <span class="major" style={`left: ${pos(t)}%`}><b>{t}°</b></span>)}
+  </div>
+  <div class="thermo-legend" aria-hidden="true">
+    <span>草稿 · 雾</span>
+    <span>越确定，越冷</span>
+    <span>稳定 · 结晶</span>
+  </div>
+</div>

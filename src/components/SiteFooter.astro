@@ -1,9 +1,8 @@
 ---
 import { getCollection } from 'astro:content';
 import { siteTemp, tempOf, fmtTemp } from '../lib/temp';
-import Mark from './Mark.astro';
 
-/* 站点温度 = 全部公开内容温度中位数（§1.2） */
+/* 站点温度 = 全部公开内容温度中位数 */
 const writing = await getCollection('writing');
 const projects = await getCollection('projects');
 const t = siteTemp([
@@ -12,21 +11,12 @@ const t = siteTemp([
 ]);
 ---
 <footer class="site-footer">
-  <div class="sys-status mono">
+  <a class="sys-status" href="/about/#temperature" title="站点温度 = 全部公开内容温度的中位数">
     <span class="breath" aria-hidden="true"></span>
-    <span>
-      低温系统 ·
-      <a href="/about/#temperature" title="站点温度 = 全部公开内容温度的中位数,点击了解温度系统" style="color: inherit;">{fmtTemp(t)}</a>
-      · 安静 · 运行中
-    </span>
-  </div>
+    <span>低温笔记 · 站点 {fmtTemp(t)}</span>
+  </a>
   <nav class="footer-nav" aria-label="页脚导航">
-    <a href="/writing/">文章</a>
-    <a href="/projects/">项目</a>
-    <a href="/log/">日志</a>
-    <a href="/about/">关于</a>
     <a href="/rss.xml">RSS</a>
-    <button type="button" class="kbd-trigger-btn mono" id="kbd-trigger-btn" title="按 H、/ 或 ? 呼出全站快捷键清单">[T 主题 · H 帮助]</button>
+    <a href="https://github.com/muyuzhong" target="_blank" rel="noopener noreferrer">GitHub</a>
   </nav>
-  <Mark size={20} />
 </footer>

@@ -1,5 +1,5 @@
 ---
-import { fmtDate, fmtTemp, tempOf, STATUS_COLOR, CATEGORY_LABEL } from '../lib/temp';
+import { fmtDate, fmtTemp, tempOf, STATUS_COLOR, STATUS_LABEL, CATEGORY_LABEL } from '../lib/temp';
 import type { CollectionEntry } from 'astro:content';
 
 interface Props { entry: CollectionEntry<'writing'> }
@@ -8,20 +8,17 @@ const d = entry.data;
 const temp = tempOf(d.status, d.temperature);
 const deprecated = d.status === 'deprecated';
 ---
-<li class="archive-item spotlight-card" data-category={d.category} data-status={d.status}>
+<li class="entry" data-nav-item data-category={d.category} data-status={d.status}>
   <a href={`/writing/${entry.id}/`}>
-    <div class="archive-meta mono">
-      <span>
-        {d.id} · {CATEGORY_LABEL[d.category]} ·
-        <span class="temp" style={`color: ${STATUS_COLOR[d.status]}`}>{fmtTemp(temp)}</span>
-      </span>
-      <time datetime={d.published.toISOString()}>{fmtDate(d.published)}</time>
+    <time class="entry-date" datetime={d.published.toISOString()}>{fmtDate(d.published)}</time>
+    <div class="entry-main">
+      <h3 class:list={['entry-title', { deprecated }]}>{d.title}</h3>
+      {d.subtitle && <p class="entry-sub">{d.subtitle}</p>}
+      <p class="entry-meta">
+        <span>{d.id}</span>
+        <span>{CATEGORY_LABEL[d.category]}</span>
+        <span class="temp"><i class="temp-dot" style={`background: ${STATUS_COLOR[d.status]}`}></i>{STATUS_LABEL[d.status]} {fmtTemp(temp)}</span>
+      </p>
     </div>
-    <h3 class:list={['archive-title', { deprecated }]}>{d.title}</h3>
-    {d.subtitle && <p class="archive-sub">{d.subtitle}</p>}
-    <p class="archive-excerpt">{d.excerpt}</p>
-    {d.tags.length > 0 && (
-      <div class="archive-tags mono">{d.tags.map((t) => t.toUpperCase()).join(' · ')}</div>
-    )}
   </a>
 </li>

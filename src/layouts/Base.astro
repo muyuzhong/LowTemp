@@ -3,7 +3,6 @@ import { ClientRouter } from 'astro:transitions';
 import { getCollection } from 'astro:content';
 import SiteHeader from '../components/SiteHeader.astro';
 import SiteFooter from '../components/SiteFooter.astro';
-import ColdRail from '../components/ColdRail.astro';
 import CommandPalette from '../components/CommandPalette.astro';
 import { tempOf, STATUS_COLOR, STATUS_LABEL, fmtTemp } from '../lib/temp';
 import '../styles/tokens.css';
@@ -12,19 +11,17 @@ import '../styles/global.css';
 interface Props {
   title: string;
   description?: string;
-  rail?: string;         // 冷轨文字
-  thermometer?: boolean; // 文章页开启阅读温度计
-  temp?: number | null;  // 文章初温,用于温度计读数
   article?: {
     published?: Date;
     updated?: Date;
     tags?: string[];
   };
 }
-const { title, description = '在噪声退去之后,记录仍然成立的东西。', rail, thermometer = false, temp, article } = Astro.props;
+const { title, description = '在噪声退去之后,记录仍然成立的东西。', article } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const ogImage = new URL('/og.png', Astro.site);
 
+/* 站内文章即刻预览（hover 链接时弹出卡片）的数据 */
 const writingList = await getCollection('writing');
 const postPreviews = Object.fromEntries(
   writingList.map((p) => [
@@ -32,15 +29,12 @@ const postPreviews = Object.fromEntries(
     {
       id: p.data.id,
       title: p.data.title,
-      subtitle: p.data.subtitle,
-      status: p.data.status,
       statusLabel: STATUS_LABEL[p.data.status],
       statusColor: STATUS_COLOR[p.data.status],
       tempStr: fmtTemp(tempOf(p.data.status, p.data.temperature)),
       excerpt: p.data.excerpt,
       minutes: p.data.minutes ?? 8,
-      published: p.data.published.toISOString().split('T')[0].replace(/-/g, '.'),
-    }
+    },
   ])
 );
 ---
@@ -52,7 +46,7 @@ const postPreviews = Object.fromEntries(
     <title>{title} · 低温笔记</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
-    <meta property="og:type" content={thermometer ? 'article' : 'website'} />
+    <meta property="og:type" content={article ? 'article' : 'website'} />
     <meta property="og:title" content={`${title} · 低温笔记`} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
@@ -71,37 +65,26 @@ const postPreviews = Object.fromEntries(
     <link rel="sitemap" href="/sitemap-index.xml" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <script is:inline>
-      /* 防闪烁:绘制前恢复主题 */
-      document.documentElement.dataset.theme =
-        localStorage.getItem('theme') || 'dark';
+      /* 防闪烁:绘制前恢复主题;没有保存过偏好时跟随系统 */
+      (function () {
+        var t;
+        try { t = localStorage.getItem('theme'); } catch (e) {}
+        document.documentElement.dataset.theme =
+          t || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;600&family=Noto+Serif+SC:wght@400;600&family=Noto+Sans+SC:wght@400;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Noto+Serif+SC:wght@500;600&family=Noto+Sans+SC:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <ClientRouter />
   </head>
   <body>
-    {thermometer && (
-      <div class="thermometer" data-initial={temp ?? ''} aria-hidden="true">
-        <div class="thermometer-gauge">
-          <div class="thermometer-fill" />
-          <div class="thermometer-cursor">
-            <span class="thermometer-pin" />
-            <span class="thermometer-readout mono" id="thermometer-readout" />
-          </div>
-          <div class="thermometer-ticks">
-            {Array.from({ length: 40 }).map((_, i) => (
-              <span class="tick-bar" data-tick-idx={i} />
-            ))}
-          </div>
-        </div>
-      </div>
-    )}
-    {rail && <ColdRail text={rail} />}
-    <div class="shell">
+    <!-- 背景等温线场(见 src/scripts/bg-field.ts);persist:换页时不重建,动画连续 -->
+    <canvas id="bg-field" transition:persist aria-hidden="true"></canvas>
+    <div class="frame">
       <SiteHeader />
       <main>
         <slot />
@@ -109,568 +92,25 @@ const postPreviews = Object.fromEntries(
       <SiteFooter />
     </div>
 
-    <!-- 站内文章即刻预览卡片 (Inspired by Gwern) -->
+    <!-- 站内文章即刻预览 -->
     <div id="link-popover" class="link-popover" aria-hidden="true">
       <div class="popover-meta mono">
-        <span class="popover-id" id="popover-id"></span>
+        <span id="popover-id"></span>
         <span class="popover-status">
           <span class="popover-dot" id="popover-dot"></span>
-          <span class="popover-status-text" id="popover-status-text"></span>
+          <span id="popover-status-text"></span>
         </span>
-        <span class="popover-time" id="popover-time"></span>
+        <span id="popover-time"></span>
       </div>
       <div class="popover-title" id="popover-title"></div>
       <div class="popover-excerpt" id="popover-excerpt"></div>
     </div>
 
-    <!-- 全局命令面板与极速检索 (Command Palette & Cold Storage) -->
     <CommandPalette />
 
-    <!-- 全局快捷键清单弹窗 (Inspired by Linear) -->
-    <div id="kbd-modal" class="kbd-modal" aria-hidden="true">
-      <div class="kbd-backdrop"></div>
-      <div class="kbd-modal-card mono">
-        <div class="kbd-head">
-          <span>KEYBOARD COMMANDS / 全局指令</span>
-          <button type="button" class="kbd-esc-btn" aria-label="关闭">ESC</button>
-        </div>
-        <div class="kbd-list">
-          <div class="kbd-row"><kbd>⌘K</kbd> / <kbd>^K</kbd><span>全局命令面板 · 毫秒级全文检索</span></div>
-          <div class="kbd-row"><kbd>T</kbd><span>切换 深色 / 浅色 主题</span></div>
-          <div class="kbd-row"><kbd>Z</kbd><span>文章内 开启 / 退出 全心流禅定模式</span></div>
-          <div class="kbd-row"><kbd>J</kbd> / <kbd>K</kbd><span>向下 / 向上 移动选择 (文章内跳转章节)</span></div>
-          <div class="kbd-row"><kbd>Enter</kbd><span>直接打开选中的文章</span></div>
-          <div class="kbd-row"><kbd>H</kbd> / <kbd>?</kbd><span>开启 / 关闭本快捷键清单</span></div>
-          <div class="kbd-row"><kbd>Esc</kbd><span>退出聚焦 / 关闭弹窗</span></div>
-        </div>
-        <div class="kbd-foot">低温实验室 · 纯键盘漫游系统</div>
-      </div>
-    </div>
-
-    <!-- 全局键盘响应 HUD Toast -->
-    <div id="kbd-toast" class="kbd-toast mono" aria-live="polite"></div>
-
     <script type="application/json" id="post-previews-data" is:inline set:html={JSON.stringify(postPreviews)} />
-
     <script>
-      /* 阅读温度计(§1.2 + ObsidianUI Glowing Scroll Gauge):
-         动态更新 --read-progress，微刻度条根据距离计算发光高度与透明度，游标投影实时温度与百分比 */
-      let gaugeTimer: number | undefined;
-      const updateThermometer = () => {
-        const gauge = document.querySelector<HTMLElement>('.thermometer');
-        if (!gauge) return;
-        const h = document.documentElement;
-        const max = h.scrollHeight - h.clientHeight;
-        const p = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
-        h.style.setProperty('--read-progress', String(p));
-
-        const initial = parseFloat(gauge.dataset.initial ?? '');
-        const readout = document.getElementById('thermometer-readout');
-        if (!Number.isNaN(initial)) {
-          const currentT = (initial - 2 * p).toFixed(1);
-          const percent = Math.round(p * 100);
-          gauge.title = `阅读深度 · ${currentT}°C · ${percent}%`;
-          if (readout) readout.textContent = `${currentT}°C · ${percent}%`;
-        }
-
-        // 微刻度条高亮均衡器 (Equalizer Glow Ticks)
-        const ticks = gauge.querySelectorAll<HTMLElement>('.tick-bar');
-        const total = ticks.length;
-        if (total > 0) {
-          const activeIdx = p * (total - 1);
-          ticks.forEach((tick, i) => {
-            const dist = Math.abs(i - activeIdx);
-            if (dist < 3.5) {
-              const glow = (1 - dist / 3.5).toFixed(2);
-              tick.style.setProperty('--tick-glow', glow);
-            } else {
-              tick.style.removeProperty('--tick-glow');
-            }
-          });
-        }
-
-        gauge.classList.add('scrolling');
-        if (gaugeTimer) clearTimeout(gaugeTimer);
-        gaugeTimer = window.setTimeout(() => {
-          gauge.classList.remove('scrolling');
-        }, 1200);
-      };
-
-      /* 1. 站内链接即刻悬停预览卡片 (Inspired by Gwern) */
-      const setupLinkPopovers = () => {
-        const popover = document.getElementById('link-popover');
-        const scriptData = document.getElementById('post-previews-data');
-        if (!popover || !scriptData || popover.dataset.bound) return;
-        popover.dataset.bound = 'true';
-
-        let previewsMap: Record<string, any> = {};
-        try {
-          previewsMap = JSON.parse(scriptData.textContent || '{}');
-        } catch (_) {
-          return;
-        }
-
-        const idEl = document.getElementById('popover-id');
-        const statusEl = document.getElementById('popover-status-text');
-        const dotEl = document.getElementById('popover-dot');
-        const timeEl = document.getElementById('popover-time');
-        const titleEl = document.getElementById('popover-title');
-        const excerptEl = document.getElementById('popover-excerpt');
-
-        let hoverTimer: number | null = null;
-
-        const hidePopover = () => {
-          if (hoverTimer) clearTimeout(hoverTimer);
-          popover.classList.remove('visible');
-          popover.setAttribute('aria-hidden', 'true');
-        };
-
-        document.addEventListener('mouseover', (e) => {
-          const target = (e.target as HTMLElement)?.closest('a');
-          if (!target) return;
-          const rawHref = target.getAttribute('href') || (typeof target.href === 'string' ? target.href : (target as any).href?.baseVal) || '';
-          if (!rawHref) return;
-
-          try {
-            const url = new URL(rawHref, window.location.origin);
-            if (url.origin !== window.location.origin) return;
-            let path = url.pathname;
-            if (!path.endsWith('/')) path += '/';
-
-            const post = previewsMap[path];
-            if (!post) return;
-
-            if (hoverTimer) clearTimeout(hoverTimer);
-            hoverTimer = window.setTimeout(() => {
-              if (idEl) idEl.textContent = post.id;
-              if (statusEl) statusEl.textContent = `${post.statusLabel} · ${post.tempStr}`;
-              if (dotEl) dotEl.style.backgroundColor = post.statusColor;
-              if (timeEl) timeEl.textContent = `${post.minutes} 分钟`;
-              if (titleEl) titleEl.textContent = post.title;
-              if (excerptEl) excerptEl.textContent = post.excerpt;
-
-              const rect = target.getBoundingClientRect();
-              const cardW = 340;
-              const cardH = 160;
-
-              let left = rect.left + rect.width / 2 - cardW / 2;
-              left = Math.max(16, Math.min(window.innerWidth - cardW - 16, left));
-
-              let top = rect.top - cardH - 12;
-              if (top < 16) {
-                top = rect.bottom + 12;
-              }
-
-              popover.style.left = `${left}px`;
-              popover.style.top = `${top}px`;
-              popover.classList.add('visible');
-              popover.setAttribute('aria-hidden', 'false');
-            }, 240);
-          } catch (_) {}
-        });
-
-        document.addEventListener('mouseout', (e) => {
-          const target = (e.target as HTMLElement)?.closest('a');
-          if (!target) return;
-          hidePopover();
-        });
-      };
-
-      /* 2. 文本解调微动效 (Text Scramble / Cryptic Reveal - Inspired by Rauno) */
-      const setupTextScramble = () => {
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-        const targets = document.querySelectorAll<HTMLElement>(
-          '.mono-id, .archive-id, .research-code, .section-title, .rail-id, .project-id, .popover-id'
-        );
-        const glyphs = '0123456789ABCDEF/·—_~';
-
-        targets.forEach((el) => {
-          if (el.dataset.scrambleBound) return;
-          el.dataset.scrambleBound = 'true';
-
-          el.addEventListener('mouseenter', () => {
-            if (el.dataset.scrambling) return;
-            el.dataset.scrambling = 'true';
-            const original = el.textContent?.trim() || '';
-            if (!original) return;
-
-            const len = original.length;
-            let frame = 0;
-            const maxFrames = 7;
-
-            const timer = setInterval(() => {
-              frame++;
-              const progress = frame / maxFrames;
-              const resolvedChars = Math.floor(progress * len);
-
-              let scrambled = '';
-              for (let i = 0; i < len; i++) {
-                if (original[i] === ' ' || original[i] === '·' || original[i] === '-' || original[i] === '/') {
-                  scrambled += original[i];
-                } else if (i < resolvedChars) {
-                  scrambled += original[i];
-                } else {
-                  scrambled += glyphs[Math.floor(Math.random() * glyphs.length)];
-                }
-              }
-              el.textContent = scrambled;
-
-              if (frame >= maxFrames) {
-                clearInterval(timer);
-                el.textContent = original;
-                delete el.dataset.scrambling;
-              }
-            }, 20);
-          });
-        });
-      };
-
-      /* 3. 极客全局快捷键与 HUD 漫游系统 (Keyboard Navigation - Inspired by Linear) */
-      let toastTimer: number | undefined;
-      const showKbdToast = (msg: string) => {
-        const toast = document.getElementById('kbd-toast');
-        if (!toast) return;
-        toast.textContent = msg;
-        toast.classList.add('visible');
-        if (toastTimer) clearTimeout(toastTimer);
-        toastTimer = window.setTimeout(() => {
-          toast.classList.remove('visible');
-        }, 2000);
-      };
-
-      const toggleModal = () => {
-        const modal = document.getElementById('kbd-modal');
-        if (!modal) return;
-        const isShown = modal.classList.contains('visible');
-        modal.classList.toggle('visible', !isShown);
-        modal.setAttribute('aria-hidden', String(isShown));
-      };
-
-      const setupKeyboardNav = () => {
-        if ((window as any).__kbdDelegatedBound) return;
-        (window as any).__kbdDelegatedBound = true;
-
-        // 全局事件代理：关闭/打开弹窗（跨页面视图切换无缝持久）
-        document.addEventListener('click', (e) => {
-          const target = e.target as HTMLElement;
-          if (target?.closest('#kbd-trigger-btn')) {
-            e.preventDefault();
-            toggleModal();
-            return;
-          }
-          if (target?.closest('#cmd-toggle-btn')) {
-            e.preventDefault();
-            (window as any).openCommandPalette?.();
-            return;
-          }
-          if (target?.closest('.kbd-esc-btn, .kbd-backdrop')) {
-            e.preventDefault();
-            const modal = document.getElementById('kbd-modal');
-            if (modal) {
-              modal.classList.remove('visible');
-              modal.setAttribute('aria-hidden', 'true');
-            }
-            return;
-          }
-        });
-
-        // 全局物理按键捕获 (同时支持 code 与 key，彻底免疫中文输入法拦截)
-        window.addEventListener('keydown', (e) => {
-          const activeEl = document.activeElement;
-          const isCmdInput = activeEl?.id === 'cmd-input';
-          if (
-            !isCmdInput &&
-            activeEl &&
-            (activeEl.tagName === 'INPUT' ||
-              activeEl.tagName === 'TEXTAREA' ||
-              (activeEl as HTMLElement).isContentEditable)
-          ) {
-            return;
-          }
-
-          const code = e.code;
-          const key = e.key ? e.key.toLowerCase() : '';
-
-          // 0. Cmd+K / Ctrl+K 呼出全站命令面板
-          if ((e.metaKey || e.ctrlKey) && (code === 'KeyK' || key === 'k')) {
-            e.preventDefault();
-            (window as any).openCommandPalette?.();
-            return;
-          }
-
-          // 1. H / ? / / / ？ 键呼出/关闭快捷键弹窗
-          if (
-            code === 'KeyH' ||
-            key === 'h' ||
-            key === '?' ||
-            key === '？' ||
-            code === 'Slash' ||
-            key === '/'
-          ) {
-            e.preventDefault();
-            toggleModal();
-            return;
-          }
-
-          // 2. Esc 键退出
-          if (code === 'Escape' || key === 'escape') {
-            (window as any).closeCommandPalette?.();
-            const modal = document.getElementById('kbd-modal');
-            if (modal?.classList.contains('visible')) {
-              modal.classList.remove('visible');
-              modal.setAttribute('aria-hidden', 'true');
-            }
-            if (document.body.classList.contains('zen-mode')) {
-              document.getElementById('zen-toggle-btn')?.click();
-            }
-            document.querySelectorAll('.kbd-selected, .kbd-active-card').forEach((el) => {
-              el.classList.remove('kbd-selected', 'kbd-active-card');
-            });
-            document.getElementById('link-popover')?.classList.remove('visible');
-            document.getElementById('quote-bubble')?.classList.remove('visible');
-            return;
-          }
-
-          // 3. T 键切换主题
-          if (code === 'KeyT' || key === 't') {
-            e.preventDefault();
-            const root = document.documentElement;
-            const current = root.dataset.theme;
-            const next = current === 'dark' ? 'light' : 'dark';
-            root.dataset.theme = next;
-            localStorage.setItem('theme', next);
-            showKbdToast(`[主题] → ${next === 'dark' ? '深色夜间模式' : '浅色明亮模式'}`);
-            return;
-          }
-
-          // 4. Z 键切换文章禅定专注模式
-          if (code === 'KeyZ' || key === 'z') {
-            e.preventDefault();
-            const zenBtn = document.getElementById('zen-toggle-btn');
-            if (zenBtn) {
-              zenBtn.click();
-              const isZen = document.body.classList.contains('zen-mode');
-              showKbdToast(isZen ? '[禅定心流开启 · ESC 退出]' : '[已退出禅定模式]');
-            } else {
-              showKbdToast('提示：禅定模式为文章阅读专属 (请进入文章体验)');
-            }
-            return;
-          }
-
-          // 5. J / K 键盘导航 (列表页选择文章 / 文章页跳转章节)
-          if (code === 'KeyJ' || key === 'j' || code === 'KeyK' || key === 'k') {
-            const isDown = code === 'KeyJ' || key === 'j';
-
-            // 5a. 如果在文章详情页中：在正文章节 (h2, h3) 之间平滑跳转！
-            const headings = Array.from(document.querySelectorAll<HTMLElement>('.prose h2, .prose h3'));
-            if (headings.length > 0) {
-              e.preventDefault();
-              let target: HTMLElement | null = null;
-              if (isDown) {
-                target = headings.find((h) => h.getBoundingClientRect().top > 80) || headings[headings.length - 1];
-              } else {
-                const reversed = [...headings].reverse();
-                target = reversed.find((h) => h.getBoundingClientRect().top < -40) || headings[0];
-              }
-              if (target) {
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                showKbdToast(`[章节跳转] ${target.textContent?.trim()}`);
-              }
-              return;
-            }
-
-            // 5b. 如果在列表页/首页中：高亮选择卡片与文章
-            const items = Array.from(
-              document.querySelectorAll<HTMLElement>(
-                '.archive-item, .project-card, .log-item, .hero-actions a'
-              )
-            );
-            if (items.length > 0) {
-              e.preventDefault();
-              let currentIndex = items.findIndex((el) => el.classList.contains('kbd-active-card'));
-              if (isDown) {
-                currentIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
-              } else {
-                currentIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
-              }
-
-              items.forEach((el) => el.classList.remove('kbd-active-card', 'kbd-selected'));
-              const target = items[currentIndex];
-              target.classList.add('kbd-active-card');
-              target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-              const link = target.querySelector<HTMLAnchorElement>('a') || (target.tagName === 'A' ? (target as HTMLAnchorElement) : null);
-              if (link) link.classList.add('kbd-selected');
-
-              const title = target.querySelector('h3, h2, .archive-title, strong')?.textContent?.trim() || target.textContent?.trim() || '项目';
-              showKbdToast(`[选择 ${currentIndex + 1}/${items.length}] ${title.slice(0, 18)} (Enter 查看)`);
-              return;
-            }
-          }
-
-          // 6. Enter 打开选中的文章
-          if (code === 'Enter' || key === 'enter') {
-            const selected = document.querySelector<HTMLAnchorElement>('.kbd-active-card a, a.kbd-selected');
-            if (selected && document.activeElement !== selected) {
-              e.preventDefault();
-              showKbdToast('正在进入文章...');
-              selected.click();
-            }
-          }
-        });
-      };
-
-      /* 4. 聚光灯冷场跟随 (Spotlight Glow - Inspired by Emil Kowalski) */
-      const setupSpotlights = () => {
-        document.querySelectorAll<HTMLElement>('.spotlight-card').forEach((card) => {
-          if (card.dataset.spotlightBound) return;
-          card.dataset.spotlightBound = 'true';
-          card.addEventListener('mousemove', (e) => {
-            const rect = card.getBoundingClientRect();
-            card.style.setProperty('--mouse-x', `${(e.clientX - rect.left).toFixed(1)}px`);
-            card.style.setProperty('--mouse-y', `${(e.clientY - rect.top).toFixed(1)}px`);
-          }, { passive: true });
-        });
-      };
-
-      /* 交互增强: 代码块一键复制 + diff 块触控点击切换 */
-      const setupInteractive = () => {
-        updateThermometer();
-        setupLinkPopovers();
-        setupTextScramble();
-        setupKeyboardNav();
-        setupSpotlights();
-
-        document.querySelectorAll<HTMLPreElement>('.prose pre').forEach((pre) => {
-          if (pre.dataset.enhanced) return;
-          pre.dataset.enhanced = 'true';
-
-          const codeEl = pre.querySelector('code');
-          const langClass = Array.from(codeEl?.classList || []).find((c) => c.startsWith('language-'));
-          const lang = langClass ? langClass.replace('language-', '').toUpperCase() : 'CODE';
-
-          let filename = '';
-          const firstLine = (codeEl?.textContent || '').split('\n')[0]?.trim() || '';
-          if (firstLine.startsWith('// ') && firstLine.includes('.')) {
-            filename = firstLine.replace('// ', '').trim();
-          } else if (firstLine.startsWith('# ') && (firstLine.includes('.') || firstLine.includes('/'))) {
-            filename = firstLine.replace('# ', '').trim();
-          }
-
-          const wrapper = document.createElement('div');
-          wrapper.className = 'codeblock-wrapper';
-
-          const header = document.createElement('div');
-          header.className = 'codeblock-header mono';
-
-          const titleDiv = document.createElement('div');
-          titleDiv.className = 'codeblock-title';
-          titleDiv.innerHTML = `
-            <span class="codeblock-dot red"></span>
-            <span class="codeblock-dot yellow"></span>
-            <span class="codeblock-dot green"></span>
-            <span class="codeblock-lang">${filename || lang}</span>
-          `;
-          header.appendChild(titleDiv);
-
-          const btn = document.createElement('button');
-          btn.className = 'copy-btn mono';
-          btn.type = 'button';
-          btn.setAttribute('aria-label', '复制代码');
-          btn.textContent = 'COPY';
-          btn.addEventListener('click', async () => {
-            const code = codeEl?.innerText ?? pre.innerText;
-            let success = false;
-            if (navigator.clipboard && window.isSecureContext) {
-              try {
-                await navigator.clipboard.writeText(code);
-                success = true;
-              } catch (_) {}
-            }
-            if (!success) {
-              try {
-                const ta = document.createElement('textarea');
-                ta.value = code;
-                ta.style.position = 'fixed';
-                ta.style.opacity = '0';
-                document.body.appendChild(ta);
-                ta.focus();
-                ta.select();
-                success = document.execCommand('copy');
-                document.body.removeChild(ta);
-              } catch (_) {}
-            }
-            if (success) {
-              btn.textContent = 'COPIED';
-              btn.classList.add('copied');
-              setTimeout(() => {
-                btn.textContent = 'COPY';
-                btn.classList.remove('copied');
-              }, 2000);
-            }
-          });
-          header.appendChild(btn);
-
-          pre.parentNode?.insertBefore(wrapper, pre);
-          wrapper.appendChild(header);
-          wrapper.appendChild(pre);
-        });
-
-        /* diff 块触控支持: 点击切换激活状态(划掉旧方向,高亮新方向) */
-        document.querySelectorAll<HTMLElement>('.diff').forEach((d) => {
-          if (d.dataset.bound) return;
-          d.dataset.bound = 'true';
-          d.addEventListener('click', () => d.classList.toggle('active'));
-        });
-
-        /* 3D 磁力透镜视差微动效 (Interactive 3D Parallax Tilt) */
-        const stage = document.getElementById('isothermStage');
-        const hero = document.querySelector<HTMLElement>('.hero');
-        if (stage && hero && !stage.dataset.boundParallax) {
-          stage.dataset.boundParallax = 'true';
-          if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-            let targetRotX = 0, targetRotY = 0;
-            let currRotX = 0, currRotY = 0;
-            let isHovering = false;
-
-            hero.addEventListener('mousemove', (e) => {
-              const rect = stage.getBoundingClientRect();
-              const cx = rect.left + rect.width / 2;
-              const cy = rect.top + rect.height / 2;
-              const nx = (e.clientX - cx) / (rect.width / 2 || 200);
-              const ny = (e.clientY - cy) / (rect.height / 2 || 200);
-              targetRotX = Math.max(-9, Math.min(9, -ny * 9));
-              targetRotY = Math.max(-9, Math.min(9, nx * 9));
-              isHovering = true;
-            }, { passive: true });
-
-            hero.addEventListener('mouseleave', () => {
-              targetRotX = 0;
-              targetRotY = 0;
-              isHovering = false;
-            }, { passive: true });
-
-            const loop = () => {
-              if (!document.getElementById('isothermStage')) return;
-              currRotX += (targetRotX - currRotX) * 0.08;
-              currRotY += (targetRotY - currRotY) * 0.08;
-
-              if (Math.abs(currRotX) > 0.01 || Math.abs(currRotY) > 0.01 || isHovering) {
-                stage.style.transform = `perspective(900px) rotateX(${currRotX.toFixed(2)}deg) rotateY(${currRotY.toFixed(2)}deg)`;
-              } else {
-                stage.style.transform = 'none';
-              }
-              requestAnimationFrame(loop);
-            };
-            requestAnimationFrame(loop);
-          }
-        }
-      };
-
-      addEventListener('scroll', updateThermometer, { passive: true });
-      document.addEventListener('astro:page-load', setupInteractive);
-      document.addEventListener('DOMContentLoaded', setupInteractive);
-      setupInteractive();
+      import '../scripts/site';
     </script>
   </body>
 </html>

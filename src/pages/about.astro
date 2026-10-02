@@ -1,13 +1,13 @@
 ---
 import Base from '../layouts/Base.astro';
 ---
-<Base title="关于" rail="ABOUT · 16.2°C">
+<Base title="关于">
   <div class="content-col">
-    <div class="post-head">
-      <div class="post-meta mono"><span>ABOUT</span><span>16.2°C</span></div>
+    <header class="page-head">
+      <div class="page-kicker"><span>ABOUT</span><span>16.2°C</span></div>
       <h1>暮羽中</h1>
-      <p class="post-sub">Independent builder and observer.</p>
-    </div>
+      <p class="page-sub">Independent builder and observer.</p>
+    </header>
 
     <div class="prose">
       <p>
@@ -19,8 +19,8 @@ import Base from '../layouts/Base.astro';
       <h2>这个站是什么</h2>
       <p>
         低温笔记是一个持续运行的个人实验室:输出长文,也记录失败;
-        呈现现在的研究,而不只是过去的结论。首页那棵结晶由全部文章生成,
-        每一篇是一条枝——它会随着写作真实生长。
+        呈现现在的研究,而不只是过去的结论。首页那条温度轴由全部文章生成,
+        每一篇是轴上的一个点——它会随着写作真实生长。
       </p>
 
       <h2 id="temperature">温度系统</h2>
@@ -45,7 +45,7 @@ import Base from '../layouts/Base.astro';
       <p>
         温度在站里有三个出口:每篇文章页头的状态栏;页脚的站点温度——
         它是全部内容温度的中位数,随发文自动变化;以及文章页顶部那条
-        1px 的阅读温度计,随着你读得越深,页面越冷。
+        细细的阅读温度计,随着你读得越深,温度越低。
         观点改变时旧文不会被删除,只会标注升华:
         知识库应该记录演化,而不是假装静止。
       </p>
@@ -64,7 +64,7 @@ import Base from '../layouts/Base.astro';
 
       <h2>实验室兵器库与基础设施</h2>
       <p>记录产出这些思考与实验的代码运行环境、评测基础设施与物理工作台：</p>
-      <div class="apparatus-grid mono">
+      <div class="apparatus-grid">
         <div class="apparatus-item">
           <span class="apparatus-label">ENGINE & RUNTIME</span>
           <span class="apparatus-val">Astro 5 · Static Native · Zero-JS Island · TypeScript · KaTeX</span>
@@ -91,7 +91,7 @@ import Base from '../layouts/Base.astro';
         <li>GitHub · <a href="https://github.com/muyuzhong" target="_blank" rel="noopener noreferrer">@muyuzhong</a></li>
         <li>RSS 订阅 · <a href="/rss.xml">/rss.xml</a></li>
       </ul>
-      <p class="mono" style="color: var(--ink-2); font-size: 14px; margin-top: 28px;">
+      <p class="aside-note">
         ※ 欢迎基于代码与实验的严肃探讨；其余时间这里保持低温与安静。
       </p>
     </div>

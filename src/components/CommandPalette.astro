@@ -1,7 +1,5 @@
 ---
-/* LowTemp Notes — Command Palette (升级版 Apple Spotlight 全局命令中枢与极速检索)
- * 汲取 ObsidianUI Apple Spotlight 弹簧动画、快捷动作胶囊与滑动 Chevron 交互
- */
+/* LowTemp Notes — 命令面板与全站检索（⌘K / Ctrl+K / /） */
 ---
 
 <div id="cmd-palette" class="cmd-palette" aria-hidden="true">
@@ -32,9 +30,9 @@
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="4"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
           <span>主题</span>
         </button>
-        <button type="button" class="cmd-shortcut-chip" data-action="zen" title="禅定聚焦阅读模式 (Z)">
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="7" stroke-dasharray="2 3"/></svg>
-          <span>禅定</span>
+        <button type="button" class="cmd-shortcut-chip" data-action="focus" title="聚焦阅读 (Z)">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 4h12M2 12h12" opacity=".4"/><path d="M2 8h12"/></svg>
+          <span>聚焦</span>
         </button>
         <button type="button" class="cmd-shortcut-chip" data-action="rss" title="RSS 订阅源">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 2a12 12 0 0 1 12 12M2 6a8 8 0 0 1 8 8"/><circle cx="3" cy="13" r="1"/></svg>
@@ -68,14 +66,14 @@
       </div>
       <div class="cmd-meta">
         <span class="cmd-status-indicator"></span>
-        低温极速检索 · SPOTLIGHT v2
+        低温笔记 · 全文检索
       </div>
     </div>
   </div>
 </div>
 
 <script>
-  /* 全局命令面板与极速检索控制器 (Spotlight + Magnet Tabs) */
+  /* 全局命令面板与极速检索控制器  */
   interface SearchItem {
     type: 'writing' | 'project' | 'log' | 'action';
     id: string;
@@ -120,47 +118,27 @@
       type: 'action',
       id: 'ACT-THEME',
       title: '切换 明亮 / 深色 主题',
-      subtitle: '即刻切换全站黑白底色调',
+      subtitle: '快捷键 T',
       category: '系统',
       url: '#',
       handler: () => {
         const root = document.documentElement;
         const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
         root.dataset.theme = next;
-        localStorage.setItem('theme', next);
-        const btn = document.getElementById('theme-toggle');
-        if (btn) btn.textContent = next === 'light' ? '深色' : '浅色';
+        try { localStorage.setItem('theme', next); } catch (_) {}
       },
     },
     {
       type: 'action',
-      id: 'ACT-ZEN',
-      title: '进入/退出 禅定极简模式 (Zen Mode)',
-      subtitle: '消除页面四周噪声，视口段落高亮聚焦',
+      id: 'ACT-FOCUS',
+      title: '开启 / 关闭 聚焦阅读',
+      subtitle: '自动高亮正在阅读的那一行，邻行渐变（仅文章页，快捷键 Z）',
       category: '阅读',
       url: '#',
       handler: () => {
-        const zenBtn = document.getElementById('zen-toggle-btn');
-        if (zenBtn) {
-          zenBtn.click();
-        } else {
-          window.location.href = '/writing/ltn-024-skill-evaluation/';
-        }
-      },
-    },
-    {
-      type: 'action',
-      id: 'ACT-KBD',
-      title: '查看 全站键盘漫游指南',
-      subtitle: '呼出完整键盘快捷键一览',
-      category: '帮助',
-      url: '#',
-      handler: () => {
-        const modal = document.getElementById('kbd-modal');
-        if (modal) {
-          modal.classList.add('visible');
-          modal.setAttribute('aria-hidden', 'false');
-        }
+        const fr = (window as any).__focusReading;
+        if (fr) fr.toggle();
+        else window.location.href = '/writing/';
       },
     },
     {
@@ -347,9 +325,8 @@
         if (action === 'theme') {
           const item = getActions().find((a) => a.id === 'ACT-THEME');
           item?.handler?.();
-        } else if (action === 'zen') {
-          const item = getActions().find((a) => a.id === 'ACT-ZEN');
-          item?.handler?.();
+        } else if (action === 'focus') {
+          getActions().find((a) => a.id === 'ACT-FOCUS')?.handler?.();
         } else if (action === 'rss') {
           window.location.href = '/rss.xml';
         }

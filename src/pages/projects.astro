@@ -6,53 +6,72 @@ import { fmtTemp, tempOf, STATUS_LABEL, STATUS_COLOR } from '../lib/temp';
 const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
 const rendered = await Promise.all(projects.map(async (p) => ({ p, ...(await render(p)) })));
 ---
-<Base title="项目" rail="项目档案">
-  <div class="content-col">
-    <div class="post-head">
-      <div class="post-meta mono"><span>项目档案</span><span>共 {projects.length} 项</span></div>
-      <h1>项目档案</h1>
-      <p class="post-sub">问题、假设、系统,以及失败过的部分。</p>
-    </div>
+<Base title="项目" description="问题、假设、系统，以及失败过的部分。">
+  <header class="page-head">
+    <div class="page-kicker"><span>项目档案</span><span>共 {projects.length} 项</span></div>
+    <h1>项目档案</h1>
+    <p class="page-sub">问题、假设、系统，以及失败过的部分。</p>
+  </header>
 
-    {rendered.map(({ p, Content }) => {
-      const d = p.data;
-      const temp = tempOf(d.status, d.temperature);
-      return (
-        <article class="lab">
-          <div class="lab-head">
-            <span class="lab-id mono">
-              {d.id} · <span style={`color: ${STATUS_COLOR[d.status]}`}>{STATUS_LABEL[d.status]} · {fmtTemp(temp)}</span>
-            </span>
-            <span class="mono" style="color: var(--ink-2)">{d.state}</span>
-          </div>
-          <h2>{d.title}</h2>
-          <p class="lab-sub">{d.subtitle}</p>
+  {rendered.map(({ p, Content }) => {
+    const d = p.data;
+    const temp = tempOf(d.status, d.temperature);
+    return (
+      <article class="lab">
+        <div class="lab-head">
+          <span>
+            {d.id} · <i class="temp-dot" style={`background: ${STATUS_COLOR[d.status]}`}></i>{STATUS_LABEL[d.status]} · {fmtTemp(temp)}
+          </span>
+          <span>{d.state}</span>
+        </div>
+        <h2>{d.title}</h2>
+        <p class="lab-sub">{d.subtitle}</p>
 
-          <div class="lab-section">
-            <div class="lab-label">问题</div>
-            <p>{d.problem}</p>
-          </div>
-          <div class="lab-section">
-            <div class="lab-label">假设</div>
-            <p>{d.hypothesis}</p>
-          </div>
+        <dl class="lab-facts">
+          <div><dt>问题</dt><dd>{d.problem}</dd></div>
+          <div><dt>假设</dt><dd>{d.hypothesis}</dd></div>
           {d.system.length > 0 && (
-            <div class="lab-section">
-              <div class="lab-label">系统</div>
-              <div class="lab-sys">{d.system.map((s, i) => `${i === d.system.length - 1 ? '└──' : '├──'} ${s}`).join('\n')}</div>
+            <div>
+              <dt>系统</dt>
+              <dd class="lab-sys">{d.system.map((s, i) => `${i === d.system.length - 1 ? '└──' : '├──'} ${s}`).join('\n')}</dd>
             </div>
           )}
-          {d.next && (
-            <div class="lab-section">
-              <div class="lab-label">下一阶段</div>
-              <p>{d.next}</p>
-            </div>
-          )}
-          <div class="prose" style="margin-top: 32px;">
-            <Content />
-          </div>
-        </article>
-      );
-    })}
-  </div>
+          {d.next && <div><dt>下一阶段</dt><dd>{d.next}</dd></div>}
+        </dl>
+
+        <div class="prose lab-body">
+          <Content />
+        </div>
+      </article>
+    );
+  })}
+
+  <section class="lab research">
+    <h2 class="block-title">当前研究</h2>
+    <a class="plain-row" href="#top">
+      <span class="plain-title">Coding Agent Harness</span>
+      <span class="plain-sub">研究面向真实代码库的上下文管理、最小变更与增量验证。</span>
+      <span class="plain-meta">开发中 · AST / 语义上下文 / 安全变更 · 更新 2026.08</span>
+    </a>
+
+    <h2 class="block-title block-title-gap">验证中的假设</h2>
+    <article class="hypo">
+      <div class="hypo-meta">
+        <span>HYPO-01</span>
+        <span><i class="temp-dot" style="background: var(--teal)"></i>验证中 7.2°C</span>
+      </div>
+      <h3>基于作用域的 AST 符号级差分能否替代全量上下文重放？</h3>
+      <p>在多轮 Coding Agent 交互中，如果单次验证耗时超过 200ms，Agent 的自愈循环就会被打破。假设仅投影被修改符号的引用拓扑即可达到 99% 的静态自愈率。</p>
+      <div class="hypo-foot">用例覆盖 18/24 · 耗时 28ms · 稳定</div>
+    </article>
+    <article class="hypo">
+      <div class="hypo-meta">
+        <span>HYPO-02</span>
+        <span><i class="temp-dot" style="background: var(--accent)"></i>假说形成 11.5°C</span>
+      </div>
+      <h3>长上下文注意力稀释是否存在不可逆的临界相变点？</h3>
+      <p>当历史输入中不相干噪声超过 60% 时，模型遵循初始硬性约束的失效率不是线性递增，而是呈现断崖式突变。严格控制输入端信噪比远胜于在输出端打补丁。</p>
+      <div class="hypo-foot">基准测试中 · 64k/128k 边界</div>
+    </article>
+  </section>
 </Base>

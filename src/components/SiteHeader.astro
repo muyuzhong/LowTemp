@@ -10,41 +10,26 @@ const nav = [
 const path = Astro.url.pathname;
 ---
 <header class="site-header">
-  <div class="brand">
-    <a href="/" aria-label="LowTemp Notes 首页"><Mark /></a>
-    <a href="/" class="brand-name">LOWTEMP</a>
-  </div>
+  <a href="/" class="brand" aria-label="低温笔记 首页">
+    <Mark size={22} />
+    <span class="brand-name">低温笔记</span>
+  </a>
   <nav class="site-nav" aria-label="主导航">
     {nav.map((n) => (
       <a href={n.href} aria-current={path.startsWith(n.href) ? 'page' : undefined}>{n.label}</a>
     ))}
-    <button id="cmd-toggle-btn" class="cmd-trigger-nav" type="button" aria-label="全站搜索 (⌘K)" title="全站搜索 (⌘K)">
-      <svg class="search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="7" cy="7" r="5" />
-        <path d="M11 11L14.5 14.5" />
+    <span class="nav-sep" aria-hidden="true"></span>
+    <button id="cmd-toggle-btn" class="icon-btn" type="button" aria-label="搜索 (⌘K)" title="搜索 (⌘K)">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+        <circle cx="7" cy="7" r="4.8" />
+        <path d="M10.6 10.6L14 14" />
       </svg>
     </button>
-    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="切换明暗模式">浅色</button>
+    <button id="theme-toggle" class="icon-btn" type="button" aria-label="切换明暗模式 (T)" title="切换明暗模式 (T)">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <circle cx="8" cy="8" r="5.6" />
+        <path d="M8 2.4a5.6 5.6 0 0 1 0 11.2z" fill="currentColor" stroke="none" />
+      </svg>
+    </button>
   </nav>
 </header>
-
-<script>
-  /* 明暗切换(§11)。视图切换后模块脚本不重跑、<html> 属性被替换,
-     所以用 astro:page-load:每次换页都重新恢复主题并给新按钮绑事件 */
-  document.addEventListener('astro:page-load', () => {
-    const root = document.documentElement;
-    root.dataset.theme = localStorage.getItem('theme') || 'dark';
-    const btn = document.getElementById('theme-toggle');
-    if (!btn) return;
-    const sync = () => {
-      btn.textContent = root.dataset.theme === 'light' ? '深色' : '浅色';
-    };
-    btn.addEventListener('click', () => {
-      const next = root.dataset.theme === 'light' ? 'dark' : 'light';
-      root.dataset.theme = next;
-      localStorage.setItem('theme', next);
-      sync();
-    });
-    sync();
-  });
-</script>

@@ -7,7 +7,7 @@ const logs = (await getCollection('log')).sort(
   (a, b) => b.data.published.getTime() - a.data.published.getTime()
 );
 
-/* 按月分组(§6.5) */
+/* 按月分组 */
 const groups = new Map<string, typeof logs>();
 for (const l of logs) {
   const d = l.data.published;
@@ -16,27 +16,27 @@ for (const l of logs) {
   groups.get(key)!.push(l);
 }
 ---
-<Base title="日志" rail="低温日志">
-  <div class="content-col">
-    <div class="post-head">
-      <div class="post-meta mono"><span>实验室日志</span><span>共 {logs.length} 条</span></div>
-      <h1>日志</h1>
-      <p class="post-sub">短记录、进展与未经整理的想法。这里允许未完成。</p>
-    </div>
+<Base title="日志" description="短记录、进展与未经整理的想法。这里允许未完成。">
+  <header class="page-head">
+    <div class="page-kicker"><span>实验室日志</span><span>共 {logs.length} 条</span></div>
+    <h1>日志</h1>
+    <p class="page-sub">短记录、进展与未经整理的想法。这里允许未完成。</p>
+  </header>
 
-    {[...groups.entries()].map(([month, items]) => (
-      <section>
-        <div class="log-month mono">{month}</div>
+  {[...groups.entries()].map(([month, items]) => (
+    <section class="log-group">
+      <h2 class="block-title">{month}</h2>
+      <div class="log">
         {items.map((l) => (
-          <div class="log-entry">
-            <span class="log-date">{fmtDate(l.data.published)}</span>
+          <div class="log-entry" id={`log-${l.id}`}>
+            <time class="log-date">{fmtDate(l.data.published)}</time>
             <p>
               {l.body}
               {l.data.link && <> — <a href={l.data.link}>链接</a></>}
             </p>
           </div>
         ))}
-      </section>
-    ))}
-  </div>
+      </div>
+    </section>
+  ))}
 </Base>
