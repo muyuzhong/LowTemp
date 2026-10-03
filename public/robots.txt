@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://muyuzhong.xyz/sitemap-index.xml
+Sitemap: https://blog.muyuzhong.xyz/sitemap-index.xml

@@ -1,6 +1,6 @@
 # LowTemp Notes
 
-低温笔记 · [muyuzhong.xyz](https://muyuzhong.xyz/)
+低温笔记 · [blog.muyuzhong.xyz](https://blog.muyuzhong.xyz/)
 
 > 在噪声退去之后，记录仍然成立的东西。
 
@@ -46,4 +46,4 @@
 - 文字内容采用 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)（署名-非商业性使用）
 - 站点实现代码基于 MIT 协议
 
-暮羽中 · [muyuzhong.xyz](https://muyuzhong.xyz/)
+暮羽中 · [blog.muyuzhong.xyz](https://blog.muyuzhong.xyz/)
