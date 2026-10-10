@@ -1034,6 +1034,110 @@ span.section-more { text-decoration: none; }
   color: var(--ink-2);
 }
 
+/* Comparison Table Card & Custom Table */
+.table-card {
+  margin: 2.2em 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-1);
+  overflow: hidden;
+}
+.table-card-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line-soft);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.table-card-header .table-title {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-0);
+}
+.table-card-header .table-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+}
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.custom-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  text-align: left;
+}
+.custom-table th, .custom-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-1);
+  vertical-align: middle;
+  line-height: 1.6;
+}
+.custom-table th {
+  background: color-mix(in srgb, var(--bg-0) 70%, var(--bg-1));
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  color: var(--ink-0);
+  white-space: nowrap;
+}
+.custom-table tr:last-child td {
+  border-bottom: none;
+}
+.custom-table .col-highlight {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  color: var(--ink-0);
+  font-weight: 500;
+}
+.custom-table th.col-highlight {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Branch Grid for Two-Way Flow */
+.arch-branch-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 640px) {
+  .arch-branch-grid { grid-template-columns: 1fr; }
+}
+
+/* KV & Flattened Node Styles */
+.kv-pill {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg-0);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  margin: 3px 0;
+  width: 100%;
+}
+.kv-pill .kv-key {
+  color: var(--accent);
+  word-break: break-all;
+}
+.kv-pill .kv-sep {
+  color: var(--ink-2);
+}
+.kv-pill .kv-val {
+  color: var(--teal);
+  font-weight: 500;
+}
+
 /* Timeline Cards */
 .timeline-grid {
   display: grid;
