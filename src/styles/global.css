@@ -1218,7 +1218,8 @@ html[data-intro] .intro-gate {
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
-.intro-gate.is-leaving { opacity: 0; transition: opacity 700ms var(--ease); }
+/* 揭开时背景交给画布:水波扫过处被擦掉,露出下面的首页 */
+html[data-intro="leaving"] .intro-gate { background: transparent; cursor: default; }
 .intro-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; opacity: 0; transition: opacity 1400ms var(--ease); }
 .intro-hud {
   position: absolute;
@@ -1251,6 +1252,10 @@ html[data-intro] .intro-gate {
 }
 .intro-enter:hover { color: var(--ink-0); }
 @keyframes intro-breathe { 50% { opacity: 0.35; } }
+.intro-gate.is-leaving .intro-hud { opacity: 0; transition: opacity 300ms var(--ease); }
+/* 首页像从水下浮上来:先略糊、略大,随水波扫过变清晰 */
+html[data-intro="leaving"] .frame { animation: intro-surface 1500ms var(--ease) both; }
+@keyframes intro-surface { from { filter: blur(3px); transform: scale(1.012); } }
 
 /* ---------- 动效纪律 ---------- */
 @media (prefers-reduced-motion: reduce) {

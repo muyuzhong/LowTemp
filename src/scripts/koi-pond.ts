@@ -9,11 +9,13 @@
  *  - 行为:闲游 + 避开池边 + 彼此分开;鼠标慢慢移动时会好奇地游过来,划得太快会受惊散开;
  *        点一下水面撒鱼食,附近的鱼过来抢
  *  - 池底有缓慢流动的焦散光纹,水面漂着几片睡莲叶,鱼从叶子底下穿过
+ *  - reveal(x, y):从一点荡开一圈水波,波前三道字符水纹,波里由浓到淡擦掉画布,露出下面的页面
  *  - 颜色只取 --blue 与 --ink-0 及其混色,跟随主题;约 30fps;prefers-reduced-motion 下只画一帧
  */
 import { noise } from './bg-field';
 
 const FRAME_MS = 33;
+const REVEAL_MS = 1500; // 揭开:水波从点击处扩到全屏
 const NA = 8; // 透明度分档
 const DIM = 0, MID = 1, HI = 2;
 const SEG = 16; // 鲤鱼脊柱节点数
@@ -518,8 +520,27 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
   };
   let frame = 0;
 
-  const render = (t: number) => {
+  const clearBuckets = () => {
     for (let b = 0; b < bIds.length; b++) { bIds[b].length = 0; bGlyphs[b].length = 0; }
+  };
+  const flush = () => {
+    ctx.font = `500 ${fs}px ${mono}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let b = 0; b < bIds.length; b++) {
+      const ids = bIds[b];
+      if (!ids.length) continue;
+      const gs = bGlyphs[b];
+      ctx.fillStyle = styles[(b / NA) | 0][b % NA];
+      for (let j = 0; j < ids.length; j++) {
+        const i = ids[j];
+        ctx.fillText(gs[j], ((i % cols) + 0.5) * cw, (((i / cols) | 0) + 0.5) * ch);
+      }
+    }
+  };
+
+  const render = (t: number) => {
+    clearBuckets();
     for (const i of kTouched) kG[i] = '';
     kTouched.length = 0;
     for (const i of foodTouched) foodAt[i] = 0;
@@ -592,27 +613,77 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
-    ctx.font = `500 ${fs}px ${mono}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    for (let b = 0; b < bIds.length; b++) {
-      const ids = bIds[b];
-      if (!ids.length) continue;
-      const gs = bGlyphs[b];
-      ctx.fillStyle = styles[(b / NA) | 0][b % NA];
-      for (let j = 0; j < ids.length; j++) {
-        const i = ids[j];
-        ctx.fillText(gs[j], ((i % cols) + 0.5) * cw, (((i / cols) | 0) + 0.5) * ch);
+    flush();
+    drawReveal(t);
+  };
+
+  /* ---------- 揭开:从一点荡开一圈水波,波里一点点露出下面的页面 ---------- */
+  let rev: { x: number; y: number; t0: number; R: number; band: number; done: () => void } | null = null;
+
+  /* 圆周上的字:左右两侧用 ( ),其余按切线走向 */
+  const ringGlyph = (dx: number, dy: number) =>
+    Math.abs(dy) < Math.abs(dx) * 0.42 ? (dx < 0 ? '(' : ')') : lineGlyph(-dy, dx);
+
+  const drawReveal = (t: number) => {
+    if (!rev) return;
+    const p = clamp((t - rev.t0) / (REVEAL_MS / 1000), 0, 1);
+    const R = rev.R * (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2); // 先慢后快再慢
+    const { x: ox, y: oy, band } = rev;
+
+    /* 波前往里 band 宽的一段由浓到淡擦掉:页面是透出来的,不是切开的 */
+    ctx.globalCompositeOperation = 'destination-out';
+    const g = ctx.createRadialGradient(ox, oy, Math.max(0, R - band), ox, oy, Math.max(1, R));
+    g.addColorStop(0, 'rgba(0,0,0,1)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'source-over';
+
+    /* 波前:三道字符水纹,外亮内淡,盖在刚露出的页面上 */
+    clearBuckets();
+    const fade = 1 - smoothstep(0.85, 1, p);
+    const crests: [number, number, number][] = [[R, HI, 1], [R - 30, MID, 0.65], [R - 76, MID, 0.35]];
+    const ra = Math.max(0, Math.floor((oy - R - ch) / ch)), rb = Math.min(rows - 1, Math.ceil((oy + R + ch) / ch));
+    for (let r = ra; r <= rb; r++) {
+      const y = (r + 0.5) * ch;
+      for (let c = 0; c < cols; c++) {
+        const x = (c + 0.5) * cw, dx = x - ox, dy = y - oy, d = Math.hypot(dx, dy) || 1;
+        /* 沿半径方向一格有多宽:格子窄高,按方向取,每道波纹才只有一格粗 */
+        const tol = 0.5 * ((Math.abs(dx) / d) * cw + (Math.abs(dy) / d) * ch);
+        for (const [rk, col, a] of crests) {
+          if (rk > 0 && Math.abs(d - rk) < tol) { put(col, a * fade, r * cols + c, ringGlyph(dx, dy)); break; }
+        }
       }
     }
+    flush();
+
+    if (p >= 1) {
+      const done = rev.done;
+      rev = null;
+      ctx.clearRect(0, 0, w, h);
+      done();
+    }
   };
+
+  const reveal = (x: number, y: number) =>
+    new Promise<void>((resolve) => {
+      if (reduced) return resolve();
+      const band = clamp(Math.min(w, h) * 0.3, 120, 280);
+      const R = Math.max(Math.hypot(x, y), Math.hypot(w - x, y), Math.hypot(x, h - y), Math.hypot(w - x, h - y)) + band;
+      rev = { x, y, t0: (performance.now() - t0) / 1000, R, band, done: resolve };
+      /* 水面真的被拍了一下,附近的鱼受惊散开 */
+      splash(x, y, q * 2, 1.3);
+      for (const k of koi) {
+        if (Math.hypot(k.x[0] - x, k.y[0] - y) < 320) { k.scared = 1; k.sx = x; k.sy = y; }
+      }
+    });
 
   /* ---------- 循环与交互 ---------- */
   const t0 = performance.now();
   let raf = 0, last = -Infinity;
   const loop = (now: number) => {
     raf = requestAnimationFrame(loop);
-    if (now - last < FRAME_MS) return;
+    if (now - last < (rev ? 15 : FRAME_MS)) return; // 揭开时 60fps,波前才顺
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     const t = (now - t0) / 1000;
@@ -701,6 +772,7 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
   }
 
   return {
+    reveal,
     destroy() {
       cancelAnimationFrame(raf);
       clearTimeout(resizeTimer);
