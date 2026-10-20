@@ -4,6 +4,7 @@ import { getCollection } from 'astro:content';
 import SiteHeader from '../components/SiteHeader.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import CommandPalette from '../components/CommandPalette.astro';
+import Intro from '../components/Intro.astro';
 import { tempOf, STATUS_COLOR, STATUS_LABEL, fmtTemp } from '../lib/temp';
 import '../styles/tokens.css';
 import '../styles/global.css';
@@ -16,8 +17,10 @@ interface Props {
     updated?: Date;
     tags?: string[];
   };
+  /** 首页入场动画(见 Intro.astro) */
+  intro?: boolean;
 }
-const { title, description = '在噪声退去之后,记录仍然成立的东西。', article } = Astro.props;
+const { title, description = '在噪声退去之后,记录仍然成立的东西。', article, intro = false } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const ogImage = new URL('/og.png', Astro.site);
 
@@ -73,6 +76,20 @@ const postPreviews = Object.fromEntries(
           t || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
       })();
     </script>
+    {intro && (
+      <script is:inline>
+        /* 入场动画:每个会话一次,?intro 强制重播。必须在绘制前决定,否则首页会先闪一下 */
+        (function () {
+          var r = document.documentElement;
+          var show = /[?&]intro\b/.test(location.search);
+          try { show = show || !sessionStorage.getItem('intro-seen'); } catch (e) {}
+          if (!show) return;
+          r.dataset.intro = 'on';
+          /* 兜底:脚本没能接管(加载失败等)时撤掉遮罩,别把人挡在门外 */
+          setTimeout(function () { if (!window.__introBound) r.removeAttribute('data-intro'); }, 5000);
+        })();
+      </script>
+    )}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -84,6 +101,7 @@ const postPreviews = Object.fromEntries(
   <body>
     <!-- 背景等温线场(见 src/scripts/bg-field.ts);persist:换页时不重建,动画连续 -->
     <canvas id="bg-field" transition:persist aria-hidden="true"></canvas>
+    {intro && <Intro />}
     <div class="frame">
       <SiteHeader />
       <main>

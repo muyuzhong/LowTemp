@@ -34,7 +34,8 @@ function grad(h: number, x: number, y: number, z: number) {
   const v = (h & 15) < 4 ? y : (h & 15) === 12 || (h & 15) === 14 ? x : z;
   return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
 }
-function noise(x: number, y: number, z: number) {
+/* 首页入场的锦鲤池 koi-pond.ts 也用这份噪声 */
+export function noise(x: number, y: number, z: number) {
   const X = Math.floor(x) & 255, Y = Math.floor(y) & 255, Z = Math.floor(z) & 255;
   x -= Math.floor(x); y -= Math.floor(y); z -= Math.floor(z);
   const u = fade(x), v = fade(y), w = fade(z);
@@ -204,8 +205,8 @@ export function initBgField() {
   const tick = (now: number) => {
     raf = 0;
     if (!running) return;
-    /* 约 30fps */
-    if (now - last >= 33) {
+    /* 约 30fps;入场动画盖住页面时不画 */
+    if (now - last >= 33 && document.documentElement.dataset.intro !== 'on') {
       last = now;
       mouse.x += (mouse.tx - mouse.x) * 0.12;
       mouse.y += (mouse.ty - mouse.y) * 0.12;
