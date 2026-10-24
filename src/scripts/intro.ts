@@ -1,4 +1,4 @@
-/* 首页入场:ASCII 锦鲤池(画面见 koi-pond.ts,design.md §2.6)
+/* 首页入场:点阵锦鲤池(画面见 koi-pond.ts,design.md §2.6)
  *
  * 这里只管「门」:遮罩与进入。
  * 点击任意处:从点击处荡开一圈水波,波里一点点露出首页(koi-pond.ts 的 reveal);
@@ -19,7 +19,7 @@ export function initIntro() {
   const canvas = gate.querySelector<HTMLCanvasElement>('.intro-canvas');
   const hud = gate.querySelector<HTMLElement>('.intro-hud');
   /* 文字浮在池面上,它下面的字符压暗;点击是「进入」,所以这里不撒鱼食 */
-  const scene = canvas && createKoiPond(canvas, { textZone: hud });
+  const scene = canvas && createKoiPond(canvas, { textZone: hud, floor: '/assets/riverbed-background.webp' });
   if (!scene) {
     root.removeAttribute('data-intro');
     return;

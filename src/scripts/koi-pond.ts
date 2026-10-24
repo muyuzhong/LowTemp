@@ -1,16 +1,15 @@
-/* ASCII 锦鲤池:俯视一方水池(入场动画 intro.ts 与独立预览共用)
+/* 点阵锦鲤池:俯视一方水池(入场动画 intro.ts 与独立预览共用)
  *
  * 思路同 ascii-sharks——一个小生态,而不是一幅画:
  *  - 水:正方形网格上的二维波动方程(经典「水波纹」算法)。鼠标划过、鱼尾摆动、鱼食落水都会激起涟漪;
  *        字符按波纹走向取 - / | \ ,波纹下的鱼和池底光纹会随折射轻轻错位
- *  - 鲤:跟随式脊柱(头转向,各节依次跟随),再叠一条从头传到尾的摆动波;
- *        每格 3×3 超采样「到脊柱的距离 / 该处半宽」得覆盖率:身子从背脊到两侧由密到疏,
- *        轮廓按覆盖落在格子哪一边取 ' . ( ),鳍是从鳍根放射的鳍条;四种花色,池底一道淡影
+ *  - 鲤:无眼睛的俯视纹理沿脊柱弯曲,逐帧采样为彩色 ASCII;鳞片与鳍条随身体摆动;
+ *        字符保持屏幕正向,鱼影落在下层河床上
  *  - 行为:闲游 + 避开池边 + 彼此分开;鼠标慢慢移动时会好奇地游过来,划得太快会受惊散开;
  *        点一下水面撒鱼食,附近的鱼过来抢
  *  - 池底有缓慢流动的焦散光纹,水面漂着几片睡莲叶,鱼从叶子底下穿过
  *  - reveal(x, y):从一点荡开一圈水波,波前三道字符水纹,波里由浓到淡擦掉画布,露出下面的页面
- *  - 颜色只取 --blue 与 --ink-0 及其混色,跟随主题;约 30fps;prefers-reduced-motion 下只画一帧
+ *  - 字符水纹跟随主题,河床与鱼保留自然色;约 30fps;prefers-reduced-motion 下只画一帧
  */
 import { noise } from './bg-field';
 
@@ -20,8 +19,10 @@ const NA = 8; // 透明度分档
 const DIM = 0, MID = 1, HI = 2;
 const SEG = 16; // 鲤鱼脊柱节点数
 const DAMP = 0.988; // 水波每步衰减
-const BODY = ':+*#%@'; // 鱼身:两侧 → 背脊,由疏到密
 const REFRACT = 26; // 水面坡度 → 折射错位(px)
+const SHADOW_OFFSET = -0.12; // 光从右下方来,鱼影沿左上方偏移体长的比例
+const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+const FISH_RAMP = ' .,:;irsXA253hMHGS#9B&@';
 
 const clamp = (x: number, a: number, b: number) => (x < a ? a : x > b ? b : x);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -72,34 +73,16 @@ function bodyHalf(s: number) {
   if (s < BODY_END) return lerp(0.095, 0.026, smoothstep(0.28, BODY_END, s)); // 收到尾柄
   return 0;
 }
-/* 尾鳍:从尾柄张成两片扇叶,末端中间一道 V 形缺口 */
-function inTail(s: number, d: number) {
-  if (s < BODY_END - 0.04) return false;
-  const k = (s - (BODY_END - 0.04)) / (1 - BODY_END + 0.04);
-  if (d > 0.026 + 0.13 * Math.sin((k * Math.PI) / 2) ** 1.2) return false;
-  return s < 0.9 || d > ((s - 0.9) / 0.1) * 0.08;
-}
-
 type Koi = {
   x: Float32Array; y: Float32Array; // 脊柱节点(头 → 尾)
   rx: Float32Array; ry: Float32Array; // 叠上摆动波之后的节点,用来画
   L: number; seg: number;
   heading: number; speed: number; base: number; wander: number;
-  phase: number; flap: number; depth: number; seed: number;
-  kind: number; // 花色:0 纯白,1 大块斑纹(红白式),2 头顶一个圆(丹顶),3 蓝身白背(浅黄式)
+  phase: number; flap: number; depth: number;
+  kind: number; // 配色:0 淡金,1 朱红,2 暖红,3 银灰
   scared: number; sx: number; sy: number; // 受惊:从 (sx, sy) 逃开
   wake: number; full: number;
 };
-/* 这一点是不是斑纹(s 沿身长,lat 是带符号的横向距离,都以体长为单位) */
-function patch(k: Koi, s: number, lat: number) {
-  switch (k.kind) {
-    case 1: return s < BODY_END - 0.05 && noise(s * 4.2 + k.seed, lat * 14 + k.seed, 0.3) > 0.1;
-    case 2: return ((s - 0.11) / 0.055) ** 2 + (lat / 0.05) ** 2 < 1;
-    case 3: return Math.abs(lat) > bodyHalf(s) * 0.45;
-    default: return false;
-  }
-}
-
 type Pad = { x: number; y: number; r: number; rot: number; vr: number; vx: number; vy: number };
 type Pellet = { x: number; y: number; life: number };
 
@@ -108,6 +91,8 @@ export interface KoiPondOptions {
   feed?: boolean;
   /** 盖在池面上的文字:这块区域里的字符压暗,文字才读得清 */
   textZone?: HTMLElement | null;
+  /** 同源河床图片,在鱼和水纹下面绘制 */
+  floor?: string;
 }
 
 export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = {}) {
@@ -128,16 +113,15 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
     /* 深色:蓝 / 浅蓝 / 白;浅色:纸面是白,三档换成淡蓝 / 蓝 / 深蓝(像水墨里的鱼) */
     const tones = luma(bg) < 0.5
       ? [mix(blue, blue, 0), mix(blue, ink, 0.5), mix(ink, ink, 0)]
-      : [mix(blue, bg, 0.35), mix(blue, blue, 0), mix(blue, ink, 0.55)];
+      : [mix(blue, bg, 0.35), mix(blue, blue, 0), mix(blue, ink, opts.floor ? 0.28 : 0.55)];
     styles = tones.map((rgb) => Array.from({ length: NA }, (_, k) => `rgba(${rgb},${((k + 1) / NA).toFixed(3)})`));
+    prepFloor();
   };
 
   /* ---------- 网格 ---------- */
   let w = 0, h = 0, dpr = 1, fs = 10, cw = 6, ch = 11, cols = 0, rows = 0;
   let q = 6, nx = 0, ny = 0; // 水波网格(正方形格,边长 q)
   let wa = new Float32Array(0), wb = new Float32Array(0); // 当前 / 上一步水面高度
-  let kG: string[] = [], kC = new Uint8Array(0), kA = new Float32Array(0); // 鱼的覆盖层
-  const kTouched: number[] = [];
   let caustic = new Uint8Array(0); // 池底光纹缓存:0 无,1 '.',2 ':'
   let foodAt = new Uint8Array(0);
   const foodTouched: number[] = [];
@@ -178,7 +162,7 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
 
   const spawnKoi = (i: number, n: number): Koi => {
     const base = Math.min(w, h);
-    const L = clamp(base * 0.3, 120, 320) * lerp(0.82, 1.12, hash(i, 1)); // 鱼要大,细节才出得来
+    const L = clamp(base * 0.4, 150, 380) * lerp(0.82, 1.12, hash(i, 1)); // 为鳞片和鳍条留出足够字符
     const heading = hash(i, 2) * Math.PI * 2;
     const hx = lerp(w * 0.15, w * 0.85, (i + 0.5) / n + (hash(i, 3) - 0.5) * 0.1);
     const hy = lerp(h * 0.2, h * 0.8, hash(i, 4));
@@ -191,7 +175,7 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
     return {
       x, y, rx: new Float32Array(SEG), ry: new Float32Array(SEG), L, seg, heading,
       speed: 30, base: L * lerp(0.12, 0.19, hash(i, 5)), wander: 0, phase: hash(i, 6) * 6, flap: hash(i, 7) * 6,
-      depth: lerp(0.72, 1, hash(i, 8)), seed: hash(i, 9) * 50, kind: [1, 2, 0, 3, 1][i % 5],
+      depth: lerp(0.72, 1, hash(i, 8)), kind: [1, 2, 0, 3, 1][i % 5],
       scared: 0, sx: 0, sy: 0, wake: 0, full: 0,
     };
   };
@@ -211,10 +195,6 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
     cols = Math.ceil(w / cw);
     rows = Math.ceil(h / ch);
     const n = cols * rows;
-    kG = new Array(n).fill('');
-    kC = new Uint8Array(n);
-    kA = new Float32Array(n);
-    kTouched.length = 0;
     caustic = new Uint8Array(n);
     foodAt = new Uint8Array(n);
     foodTouched.length = 0;
@@ -246,6 +226,138 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
         return { x, y, r, rot: hash(i, 23) * 6.28, vr: (hash(i, 24) - 0.5) * 0.06, vx: (hash(i, 25) - 0.5) * 5, vy: (hash(i, 26) - 0.5) * 5 };
       });
     }
+    prepFloor();
+  };
+
+  /* 河床、鱼和透明水面分层合成,揭开时一起擦掉。 */
+  const floorImg = opts.floor ? new Image() : null;
+  const floorCanvas = document.createElement('canvas');
+  const floorCtx = floorCanvas.getContext('2d', { willReadFrequently: true });
+  const surfaceCanvas = document.createElement('canvas');
+  const surfaceCtx = surfaceCanvas.getContext('2d');
+  let surfaceData: ImageData | null = null, waterTint: CanvasGradient | null = null;
+  let floorSource: Uint32Array | null = null, floorData: ImageData | null = null;
+  let floorPixels = new Uint32Array(0), floorOn = 0;
+  let floorPaper = [0, 0, 0], floorStep = 20;
+  const prepFloor = () => {
+    if (!floorCtx || !floorImg?.naturalWidth || !w || !h) return;
+    // shortcut: 河床最长边最多 800 像素,需要近距离放大细节时再提高分辨率。
+    const scale = Math.min(0.5, 800 / Math.max(w, h));
+    const fw = floorCanvas.width = Math.max(1, Math.ceil(w * scale));
+    const fh = floorCanvas.height = Math.max(1, Math.ceil(h * scale));
+    const cover = Math.max(fw / floorImg.naturalWidth, fh / floorImg.naturalHeight);
+    const iw = floorImg.naturalWidth * cover, ih = floorImg.naturalHeight * cover;
+    floorCtx.drawImage(floorImg, (fw - iw) / 2, (fh - ih) / 2, iw, ih);
+    const dark = luma(bg) < 0.5, paper = parse(bg).join(',');
+    floorPaper = parse(bg);
+    floorStep = dark ? 20 : 24;
+    floorCtx.fillStyle = `rgba(${paper},${dark ? 0.36 : 0.5})`;
+    floorCtx.fillRect(0, 0, fw, fh);
+    const fade = floorCtx.createRadialGradient(fw / 2, fh * 0.53, 0, fw / 2, fh * 0.53, Math.max(fw, fh) * 0.62);
+    fade.addColorStop(0, `rgba(${paper},0.24)`);
+    fade.addColorStop(1, `rgba(${paper},0)`);
+    floorCtx.fillStyle = fade;
+    floorCtx.fillRect(0, 0, fw, fh);
+    const zone = opts.textZone?.getBoundingClientRect(), rect = canvas.getBoundingClientRect();
+    if (zone?.height) {
+      const y = ((zone.top + zone.bottom) / 2 - rect.top) * fh / h;
+      const glow = floorCtx.createRadialGradient(fw / 2, y, 0, fw / 2, y, Math.min(fw, fh) * 0.65);
+      glow.addColorStop(0, `rgba(${paper},0.75)`);
+      glow.addColorStop(1, `rgba(${paper},0)`);
+      floorCtx.fillStyle = glow;
+      floorCtx.fillRect(0, 0, fw, fh);
+    }
+    floorSource = new Uint32Array(floorCtx.getImageData(0, 0, fw, fh).data.buffer);
+    floorData = floorCtx.createImageData(fw, fh);
+    floorPixels = new Uint32Array(floorData.data.buffer);
+    surfaceCanvas.width = nx;
+    surfaceCanvas.height = ny;
+    surfaceData = surfaceCtx?.createImageData(nx, ny) ?? null;
+    waterTint = ctx.createRadialGradient(w * 0.5, h * 0.48, 0, w * 0.5, h * 0.48, Math.max(w, h) * 0.65);
+    waterTint.addColorStop(0, 'rgba(22,76,88,0.12)');
+    waterTint.addColorStop(1, 'rgba(22,76,88,0.015)');
+  };
+
+  const drawFloor = () => {
+    if (!floorCtx || !floorSource || !floorData) return;
+    const fw = floorCanvas.width, fh = floorCanvas.height;
+    const sx = w / fw, sy = h / fh;
+    // 用同一水面坡度折射河床,双线性插值避免水波网格露出方块边缘。
+    for (let y = 0, o = 0; y < fh; y++) {
+      const wy = clamp((y + 0.5) * sy / q, 1, ny - 2.001), j = Math.floor(wy), v = wy - j;
+      for (let x = 0; x < fw; x++, o++) {
+        const wx = clamp((x + 0.5) * sx / q, 1, nx - 2.001), i = Math.floor(wx), u = wx - i, k = j * nx + i;
+        const gx = lerp(lerp(wa[k + 1] - wa[k - 1], wa[k + 2] - wa[k], u),
+          lerp(wa[k + nx + 1] - wa[k + nx - 1], wa[k + nx + 2] - wa[k + nx], u), v) * 0.5;
+        const gy = lerp(lerp(wa[k + nx] - wa[k - nx], wa[k + nx + 1] - wa[k - nx + 1], u),
+          lerp(wa[k + nx * 2] - wa[k], wa[k + nx * 2 + 1] - wa[k + 1], u), v) * 0.5;
+        const px = clamp(Math.round(x + gx * REFRACT / sx), 0, fw - 1);
+        const py = clamp(Math.round(y + gy * REFRACT / sy), 0, fh - 1);
+        /* 河床本身做网点量化;固定屏幕阈值,折射时重新取色,纹理不会随机闪烁。 */
+        const color = floorSource[py * fw + px];
+        const light = clamp(-(gx + gy) * 90, -14, 20);
+        const nudge = ((BAYER4[(y & 3) * 4 + (x & 3)] + 0.5) / 16 - 0.5) * floorStep + light;
+        const r = clamp(floorPaper[0] + Math.round(((color & 255) - floorPaper[0] + nudge) / floorStep) * floorStep, 0, 255);
+        const g = clamp(floorPaper[1] + Math.round((((color >>> 8) & 255) - floorPaper[1] + nudge) / floorStep) * floorStep, 0, 255);
+        const b = clamp(floorPaper[2] + Math.round((((color >>> 16) & 255) - floorPaper[2] + nudge) / floorStep) * floorStep, 0, 255);
+        floorPixels[o] = ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0;
+      }
+    }
+    floorCtx.putImageData(floorData, 0, 0);
+    ctx.save();
+    ctx.globalAlpha = floorOn;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(floorCanvas, 0, 0, w, h);
+    /* 柔和的实体鱼影落在河床上;复用脊柱和身宽,与鱼身同步。 */
+    ctx.globalCompositeOperation = 'multiply'; // 深色河床上也只压暗,不把投影染成亮斑
+    ctx.fillStyle = '#254c59';
+    for (const k of koi) {
+      ctx.globalAlpha = floorOn * (0.19 - (k.depth - 0.72) * 0.16);
+      ctx.filter = `blur(${3 + k.depth * 3}px)`;
+      ctx.beginPath();
+      for (const side of [-1, 1]) {
+        for (let n = 0; n < SEG; n++) {
+          const i = side === -1 ? n : SEG - 1 - n, j = Math.max(1, i);
+          const dx = k.rx[j] - k.rx[j - 1], dy = k.ry[j] - k.ry[j - 1], len = Math.hypot(dx, dy) || 1;
+          const half = bodyHalf(i / (SEG - 1)) * k.L * side;
+          const [, gx, gy] = water(k.rx[i], k.ry[i]);
+          const x = k.rx[i] - dy / len * half + k.L * SHADOW_OFFSET * k.depth - gx * REFRACT;
+          const y = k.ry[i] + dx / len * half + k.L * SHADOW_OFFSET * k.depth - gy * REFRACT;
+          if (side === -1 && n === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+
+  };
+
+  /* 水面在鱼上方:缓慢流动的天空反光,叠加与河床折射一致的波面明暗。 */
+  const drawSurface = (t: number) => {
+    if (!floorSource || !surfaceCtx || !surfaceData || !waterTint) return;
+    const pixels = surfaceData.data;
+    for (let j = 0, k = 0; j < ny; j++) {
+      for (let i = 0; i < nx; i++, k++) {
+        const [height, gx, gy] = water(i * q, j * q);
+        const reflection = noise((i * q + gx * REFRACT) * 0.009, (j * q + gy * REFRACT) * 0.018, t * 0.09);
+        const glint = Math.max(0, 1 - Math.abs(reflection + 0.06) * 6) ** 2 * 0.14;
+        const light = clamp(-(gx + gy) * 3.2, -0.1, 0.38) + smoothstep(0.04, 0.22, height) * 0.14;
+        const bright = light + glint >= 0, o = k * 4;
+        pixels[o] = bright ? 193 : 14;
+        pixels[o + 1] = bright ? 224 : 57;
+        pixels[o + 2] = bright ? 229 : 71;
+        pixels[o + 3] = Math.round(Math.min(0.55, Math.abs(light + glint)) * 255);
+      }
+    }
+    surfaceCtx.putImageData(surfaceData, 0, 0);
+    ctx.save();
+    ctx.globalAlpha = floorOn;
+    ctx.fillStyle = waterTint;
+    ctx.fillRect(0, 0, w, h);
+    // 水波格子的中心位于 i*q;补半格偏移,让反光与下方折射对齐。
+    ctx.drawImage(surfaceCanvas, -q / 2, -q / 2, nx * q, ny * q);
+    ctx.restore();
   };
 
   /* ---------- 行为 ---------- */
@@ -308,7 +420,9 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
 
     const want = Math.atan2(ay, ax);
     const dh = wrapAngle(want - k.heading);
-    k.heading += clamp(dh, -turn * dt, turn * dt);
+    // 转弯半径至少约半个身长,避免跟随脊柱蜷成一团。
+    const maxTurn = Math.min(turn, Math.max(k.speed, k.base) / (k.L * 0.65));
+    k.heading += clamp(dh, -maxTurn * dt, maxTurn * dt);
     k.speed += (k.base * boost - k.speed) * Math.min(1, dt * 1.6);
     k.x[0] += Math.cos(k.heading) * k.speed * dt;
     k.y[0] += Math.sin(k.heading) * k.speed * dt;
@@ -330,17 +444,18 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
     }
 
     /* 叠上从头传到尾的摆动波(只影响画,不影响游动) */
-    const amp = k.L * 0.045 * (0.6 + k.speed / 90);
+    const amp = k.L * 0.04 * (0.6 + k.speed / 90);
     for (let i = 0; i < SEG; i++) {
       const j = Math.max(1, i);
       const tx = k.x[j - 1] - k.x[j], ty = k.y[j - 1] - k.y[j], d = Math.hypot(tx, ty) || 1;
-      const lat = amp * Math.sin(k.phase - i * 0.55) * (i / (SEG - 1)) ** 1.4;
+      const lat = amp * Math.sin(k.phase - i * 0.55) * (i / (SEG - 1)) ** 2;
       k.rx[i] = k.x[i] - (ty / d) * lat;
       k.ry[i] = k.y[i] + (tx / d) * lat;
     }
   };
 
   const update = (t: number, dt: number) => {
+    if (floorSource) floorOn = Math.min(1, floorOn + dt / 1.2);
     for (const k of koi) updateKoi(k, dt);
     /* 时不时有鱼到水面吻一下,或一滴水落下 */
     nextEvent -= dt;
@@ -369,144 +484,111 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
     stepWater();
   };
 
-  /* ---------- 画鱼:3×3 超采样「到脊柱的距离 / 该处半宽」 ---------- */
-  const overKoi = (c: number, r: number, g: string, col: number, a: number, under = false) => {
-    if (c < 0 || r < 0 || c >= cols || r >= rows) return;
-    const i = r * cols + c;
-    if (kG[i]) { if (under) return; } else kTouched.push(i);
-    kG[i] = g;
-    kC[i] = col;
-    kA[i] = a;
-  };
-
-  /* 轮廓字:覆盖到的部分落在格子哪一边(mx, my ∈ 0..1),就取贴着那一边的字 */
-  const edgeGlyph = (mx: number, my: number) => (my < 0.35 ? "'" : my > 0.65 ? '.' : mx < 0.35 ? ')' : mx > 0.65 ? '(' : ':');
-
-  /* 点到脊柱第 i 段的距离²;raw 是投影参数(未截断) */
-  const segHit = (X: Float32Array, Y: Float32Array, i: number, px: number, py: number): [number, number] => {
-    const vx = X[i + 1] - X[i], vy = Y[i + 1] - Y[i], l2 = vx * vx + vy * vy || 1;
-    const raw = ((px - X[i]) * vx + (py - Y[i]) * vy) / l2, u = clamp(raw, 0, 1);
-    return [(X[i] + vx * u - px) ** 2 + (Y[i] + vy * u - py) ** 2, raw];
-  };
-
-  const rasterKoi = (k: Koi) => {
-    const L = k.L, X = k.rx, Y = k.ry;
-    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (let i = 0; i < SEG; i++) {
-      x0 = Math.min(x0, X[i]); x1 = Math.max(x1, X[i]);
-      y0 = Math.min(y0, Y[i]); y1 = Math.max(y1, Y[i]);
-    }
-    const reach = L * 0.3; // 鳍伸出脊柱的最远距离
-    const shx = L * 0.05 * k.depth, shy = L * 0.08 * k.depth; // 池底的影子往右下偏
-    const c0 = Math.max(0, Math.floor((x0 - reach) / cw)), c1 = Math.min(cols - 1, Math.ceil((x1 + reach + shx) / cw));
-    const r0 = Math.max(0, Math.floor((y0 - reach) / ch)), r1 = Math.min(rows - 1, Math.ceil((y1 + reach + shy) / ch));
-
-    /* 脊柱上 s 处的点和朝尾的切线 */
-    const at = (s: number) => {
-      const f = s * (SEG - 1), i = Math.min(SEG - 2, Math.floor(f)), u = f - i;
-      const tx = X[i + 1] - X[i], ty = Y[i + 1] - Y[i], l = Math.hypot(tx, ty) || 1;
-      return [lerp(X[i], X[i + 1], u), lerp(Y[i], Y[i + 1], u), tx / l, ty / l];
-    };
-    /* 鳍:胸鳍一对(大,扇形,缓慢扇动),腹鳍一对(小)。[椭圆中心 x, y, 长轴方向 x, y, 半长, 半宽, 鳍根 x, y] */
-    const fins: number[][] = [];
-    const addFin = (s: number, beta: number, len: number, wid: number, side: number) => {
-      const [ax, ay, tx, ty] = at(s);
-      const ox = -ty * side, oy = tx * side; // 朝外的法线
-      const dx = tx * Math.cos(beta) + ox * Math.sin(beta), dy = ty * Math.cos(beta) + oy * Math.sin(beta);
-      const bx = ax + ox * bodyHalf(s) * L * 0.8, by = ay + oy * bodyHalf(s) * L * 0.8;
-      fins.push([bx + dx * len * L, by + dy * len * L, dx, dy, len * L, wid * L, bx, by]);
-    };
+  /* ---------- 俯视纹理 → 摆动的鱼体 → 彩色 ASCII ---------- */
+  const fishImg = new Image();
+  const fishCanvas = document.createElement('canvas');
+  const fishCtx = fishCanvas.getContext('2d', { willReadFrequently: true });
+  const fallback = document.createElement('canvas');
+  fallback.width = 512;
+  fallback.height = 200;
+  const fallbackCtx = fallback.getContext('2d');
+  // 图片尚未加载或失败时,仍然用同一字符管线显示无眼睛的鱼。
+  if (fallbackCtx) {
+    const shade = fallbackCtx.createLinearGradient(0, 48, 0, 152);
+    shade.addColorStop(0, '#687b76');
+    shade.addColorStop(0.5, '#f0e8d4');
+    shade.addColorStop(1, '#8b9b8d');
+    fallbackCtx.fillStyle = shade;
+    fallbackCtx.beginPath();
     for (const side of [-1, 1]) {
-      addFin(0.19, 1.15 + 0.3 * Math.sin(k.flap + side * 0.7), 0.095, 0.05, side);
-      addFin(0.46, 0.75 + 0.15 * Math.sin(k.flap * 0.8 + side), 0.045, 0.02, side);
-    }
-    const [pedX, pedY] = at(BODY_END - 0.03); // 尾鳍条从尾柄放射
-    const [ex, ey, etx, ety] = at(0.055);
-    const eyes = [[ex - ety * L * 0.055, ey + etx * L * 0.055], [ex + ety * L * 0.055, ey - etx * L * 0.055]];
-    const reject = (reach + 10) ** 2;
-
-    for (let r = r0; r <= r1; r++) {
-      for (let c = c0; c <= c1; c++) {
-        const cx = (c + 0.5) * cw, cy = (r + 0.5) * ch;
-        /* 先看格子中心离脊柱多远:太远直接跳过;记下最近的一段,超采样只查它附近 */
-        let j0 = 0, dc = Infinity;
-        for (let i = 0; i < SEG - 1; i++) {
-          const [d] = segHit(X, Y, i, cx, cy);
-          if (d < dc) { dc = d; j0 = i; }
-        }
-        if (dc > reject) continue;
-        const ja = Math.max(0, j0 - 2), jb = Math.min(SEG - 2, j0 + 2);
-        const [, gx, gy] = water(cx, cy);
-        const offx = gx * REFRACT, offy = gy * REFRACT; // 波纹下的鱼随折射错位
-
-        let nb = 0, nf = 0, shade = 0, sSum = 0, latSum = 0, mxs = 0, mys = 0, fdx = 0, fdy = 0, fxs = 0, fys = 0;
-        for (let sj = 0; sj < 3; sj++) {
-          for (let si = 0; si < 3; si++) {
-            const px = (c + (si + 0.5) / 3) * cw + offx, py = (r + (sj + 0.5) / 3) * ch + offy;
-            let best = Infinity, bs = 0, side = 0, past = false;
-            for (let i = ja; i <= jb; i++) {
-              const [d, raw] = segHit(X, Y, i, px, py);
-              if (d < best) {
-                best = d;
-                bs = (i + clamp(raw, 0, 1)) / (SEG - 1);
-                side = (X[i + 1] - X[i]) * (py - Y[i]) - (Y[i + 1] - Y[i]) * (px - X[i]);
-                past = i === SEG - 2 && raw > 1; // 尾鳍末端之外
-              }
-            }
-            const d = Math.sqrt(best) / L, hw = bodyHalf(bs);
-            if (d < hw) {
-              nb++;
-              shade += 1 - (d / hw) ** 2; // 背脊最亮
-              sSum += bs;
-              latSum += side > 0 ? d : -d;
-              mxs += si;
-              mys += sj;
-            } else if (!past && inTail(bs, d)) {
-              nf++;
-              fdx += px - pedX;
-              fdy += py - pedY;
-              fxs += si;
-              fys += sj;
-            } else {
-              for (const f of fins) {
-                const ox = px - f[0], oy = py - f[1];
-                const a = (ox * f[2] + oy * f[3]) / f[4], b = (oy * f[2] - ox * f[3]) / f[5];
-                if (a * a + b * b < 1) { nf++; fdx += px - f[6]; fdy += py - f[7]; fxs += si; fys += sj; break; }
-              }
-            }
-          }
-        }
-
-        const alpha = k.depth;
-        if (nb >= 4) {
-          if (eyes.some(([qx, qy]) => Math.abs(qx - cx) < cw * 0.6 && Math.abs(qy - cy) < ch * 0.5)) {
-            overKoi(c, r, 'o', DIM, alpha);
-            continue;
-          }
-          const v = (nb / 9) * (0.3 + 0.7 * (shade / nb));
-          const g = BODY[clamp(Math.round(v * (BODY.length - 1)), 0, BODY.length - 1)];
-          overKoi(c, r, g, patch(k, sSum / nb, latSum / nb) ? MID : HI, alpha * (0.8 + 0.2 * v));
-        } else if (nb > 0) {
-          overKoi(c, r, edgeGlyph(mxs / nb / 2, mys / nb / 2), HI, alpha * 0.85);
-        } else if (nf >= 7) {
-          /* 鳍里面:鳍条从鳍根放射,一根一根分开,之间是薄薄的鳍膜 */
-          const ray = Math.abs(Math.sin(Math.atan2(fdy, fdx) * 9)) < 0.5;
-          overKoi(c, r, ray ? lineGlyph(fdx, fdy) : ':', MID, alpha * (ray ? 0.6 : 0.32));
-        } else if (nf > 0) {
-          /* 鳍的轮廓:和鱼身一样贴着覆盖的那一边取字,扇形才看得出来 */
-          overKoi(c, r, edgeGlyph(fxs / nf / 2, fys / nf / 2), MID, alpha * 0.75);
-        } else {
-          /* 池底的影子:把格子往左上挪回去,落在鱼身里就是影子 */
-          const sx = cx - shx, sy = cy - shy;
-          let best = Infinity, bs = 0;
-          for (let i = Math.max(0, j0 - 3); i <= Math.min(SEG - 2, j0 + 3); i++) {
-            const [d, raw] = segHit(X, Y, i, sx, sy);
-            if (d < best) { best = d; bs = (i + clamp(raw, 0, 1)) / (SEG - 1); }
-          }
-          if (Math.sqrt(best) / L < bodyHalf(bs) * 0.9) overKoi(c, r, '.', DIM, 0.4 * alpha, true);
-        }
+      for (let n = 0; n <= 80; n++) {
+        const s = (side < 0 ? n : 80 - n) / 80 * BODY_END;
+        const x = s * 512, y = 100 + side * bodyHalf(s) * 512;
+        if (side < 0 && n === 0) fallbackCtx.moveTo(x, y); else fallbackCtx.lineTo(x, y);
       }
     }
+    fallbackCtx.fill();
+    fallbackCtx.globalAlpha = 0.65;
+    for (const side of [-1, 1]) {
+      for (const [x, y, tip, spread] of [[110, 34, 180, 86], [275, 24, 325, 57], [380, 6, 510, 65]]) {
+        fallbackCtx.beginPath();
+        fallbackCtx.moveTo(x, 100 + side * y);
+        fallbackCtx.quadraticCurveTo(tip, 100 + side * spread * 1.2, tip, 100 + side * spread);
+        fallbackCtx.lineTo(x + 60, 100 + side * y);
+        fallbackCtx.fill();
+      }
+    }
+  }
+  let fishTexture: HTMLImageElement | HTMLCanvasElement = fallback;
+
+  const drawKoi = (k: Koi) => {
+    if (!fishCtx) return;
+    const point = (s: number, lateral = 0) => {
+      const f = clamp(s, 0, 1) * (SEG - 1), i = Math.min(SEG - 2, Math.floor(f)), u = f - i;
+      const a = Math.max(0, i - 1), b = Math.min(SEG - 1, i + 2);
+      const dx = k.rx[b] - k.rx[a], dy = k.ry[b] - k.ry[a], length = Math.hypot(dx, dy) || 1;
+      const x = lerp(k.rx[i], k.rx[i + 1], u) - dy / length * lateral * k.L;
+      const y = lerp(k.ry[i], k.ry[i + 1], u) + dx / length * lateral * k.L;
+      const [, gx, gy] = water(x, y);
+      return [x - gx * REFRACT, y - gy * REFRACT];
+    };
+    const size = clamp(k.L / 76, 4.5, 6.5), cellW = size * 0.62, cellH = size * 1.12;
+    const margin = k.L * 0.25 + 10;
+    const left = Math.floor((Math.min(...k.rx) - margin) / cellW) * cellW;
+    const top = Math.floor((Math.min(...k.ry) - margin) / cellH) * cellH;
+    const nc = Math.ceil((Math.max(...k.rx) + margin - left) / cellW);
+    const nr = Math.ceil((Math.max(...k.ry) + margin - top) / cellH);
+    // 每个字符平均 2×2 个像素,让薄鳍和轮廓在转弯时不闪烁。
+    const width = nc * 2, height = nr * 2;
+    if (fishCanvas.width < width) fishCanvas.width = width;
+    if (fishCanvas.height < height) fishCanvas.height = height;
+    fishCtx.setTransform(1, 0, 0, 1, 0, 0);
+    fishCtx.clearRect(0, 0, fishCanvas.width, fishCanvas.height);
+    const iw = fishTexture.width, ih = fishTexture.height;
+    for (let n = 0; n < 64; n++) {
+      const s = (n + 0.5) / 64;
+      const [x0, y0] = point(n / 64), [x1, y1] = point((n + 1) / 64);
+      const fan = 1 + Math.sin(k.flap) * 0.07 * Math.exp(-(((s - 0.25) / 0.12) ** 2));
+      const [fx, fy] = point(s, ih / iw * fan), [cx, cy] = point(s);
+      fishCtx.setTransform((x1 - x0) * 2 / cellW, (y1 - y0) * 2 / cellH,
+        (fx - cx) * 2 / cellW, (fy - cy) * 2 / cellH,
+        (x0 - left) * 2 / cellW, (y0 - top) * 2 / cellH);
+      fishCtx.drawImage(fishTexture, n / 64 * iw, 0, iw / 64, ih, 0, -0.5, 1.03, 1);
+    }
+    const pixels = fishCtx.getImageData(0, 0, width, height).data;
+    const dark = luma(bg) < 0.5;
+    ctx.save();
+    ctx.font = `600 ${size}px ${mono}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let row = 0; row < nr; row++) {
+      const y = top + (row + 0.5) * cellH;
+      if (y < 0 || y > h) continue;
+      for (let col = 0; col < nc; col++) {
+        const x = left + (col + 0.5) * cellW;
+        if (x < 0 || x > w) continue;
+        let r = 0, g = 0, b = 0, alpha = 0;
+        const start = (row * 2 * width + col * 2) * 4;
+        for (const o of [start, start + 4, start + width * 4, start + width * 4 + 4]) {
+          const a = pixels[o + 3] / 255;
+          r += pixels[o] * a; g += pixels[o + 1] * a; b += pixels[o + 2] * a;
+          alpha += a;
+        }
+        if (alpha < 0.3) continue;
+        r /= alpha; g /= alpha; b /= alpha;
+        const light = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 255;
+        const glyph = FISH_RAMP[Math.round(clamp(light ** 0.7, 0, 1) * (FISH_RAMP.length - 3)) + 2];
+        if (k.kind === 0) { g = lerp(g, r * 0.87, 0.75); b = lerp(b, r * 0.52, 0.6); }
+        if (k.kind === 2) { g = lerp(g, r * 0.56, 0.2); }
+        if (k.kind === 3) { r = lerp(r, light * 255, 0.85); g = lerp(g, light * 255, 0.85); b = lerp(b, light * 255, 0.85); }
+        const tint = dark ? 1 : 0.67;
+        ctx.fillStyle = `rgb(${Math.round(r * tint)},${Math.round(g * tint)},${Math.round(b * tint)})`;
+        const zone = dimZone[Math.floor(y / ch) * cols + Math.floor(x / cw)];
+        ctx.globalAlpha = Math.min(1, alpha / 4) * k.depth ** 1.4 * (zone ? 0.45 : 0.95);
+        ctx.fillText(glyph, x, y);
+      }
+    }
+    ctx.restore();
   };
 
   /* ---------- 一帧 ---------- */
@@ -541,8 +623,6 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
 
   const render = (t: number) => {
     clearBuckets();
-    for (const i of kTouched) kG[i] = '';
-    kTouched.length = 0;
     for (const i of foodTouched) foodAt[i] = 0;
     foodTouched.length = 0;
     for (const p of pellets) {
@@ -551,8 +631,6 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
       foodAt[r * cols + c] = 1;
       foodTouched.push(r * cols + c);
     }
-    /* 深的先画,浅的盖上去 */
-    [...koi].sort((a, b) => a.depth - b.depth).forEach(rasterKoi);
 
     /* 池底光纹变化慢,隔帧算一次 */
     const redoCaustic = frame++ % 2 === 0;
@@ -571,6 +649,7 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
         /* 睡莲叶:圆叶缺一角,叶脉放射;鱼从下面穿过 */
         let leaf = false;
         for (const p of pads) {
+          if (floorSource) break;
           const dx = x - p.x, dy = y - p.y, d = Math.hypot(dx, dy);
           if (d > p.r) continue;
           const a = wrapAngle(Math.atan2(dy, dx) - p.rot);
@@ -587,10 +666,6 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
         if (leaf) continue;
 
         const [hv, gx, gy] = water(x, y);
-        const strong = Math.abs(hv) > 0.3;
-
-        /* 鱼;很强的波纹会盖过鱼身 */
-        if (kG[i] && !strong) { put(kC[i], kA[i] * (dimZone[i] ? 0.45 : 1), i, kG[i]); continue; }
 
         /* 涟漪:按波纹走向取字,波峰亮、波谷暗 */
         if (hv > 0.08) {
@@ -606,14 +681,17 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
           const ridge = 1 - Math.abs(n) * 28;
           caustic[i] = ridge > 0.5 ? 2 : ridge > 0 ? 1 : 0;
         }
-        if (caustic[i]) put(DIM, (caustic[i] === 2 ? 0.42 : 0.24) * dim, i, '.');
+        if (caustic[i]) put(DIM, (caustic[i] === 2 ? 0.42 : 0.24) * dim * (floorSource ? 0.35 : 1), i, '.');
       }
     }
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
+    drawFloor();
+    [...koi].sort((a, b) => a.depth - b.depth).forEach(drawKoi);
     flush();
+    drawSurface(t);
     drawReveal(t);
   };
 
@@ -763,6 +841,21 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
 
   readColors();
   layout();
+  fishImg.decoding = 'async';
+  fishImg.onload = () => {
+    fishTexture = fishImg;
+    if (reduced) render(4);
+  };
+  // shortcut: 共用一张俯视纹理;需要不同花纹的个体时再增加素材。
+  fishImg.src = '/assets/koi-top.webp';
+  if (floorImg) {
+    floorImg.decoding = 'async';
+    floorImg.onload = () => {
+      prepFloor();
+      if (reduced) { floorOn = 1; render(4); }
+    };
+    floorImg.src = opts.floor!;
+  }
   if (reduced) {
     still();
     /* 画布上的等宽字不会触发字体加载;字体到位后重画一次 */
@@ -774,6 +867,8 @@ export function createKoiPond(canvas: HTMLCanvasElement, opts: KoiPondOptions = 
   return {
     reveal,
     destroy() {
+      fishImg.onload = null;
+      if (floorImg) floorImg.onload = null;
       cancelAnimationFrame(raf);
       clearTimeout(resizeTimer);
       removeEventListener('pointermove', onMove);

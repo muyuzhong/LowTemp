@@ -1,0 +1,35 @@
+---
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>游鱼 · ASCII 预览</title>
+  </head>
+  <body>
+    <canvas id="pond" role="img" aria-label="无眼睛的俯视锦鲤，由彩色 ASCII 字符组成，在水中缓慢游动。"></canvas>
+    <header><h1>游鱼 <span>/ ASCII</span></h1><a href="/?intro">查看首页入场 ↗</a></header>
+    <p class="hint">移动指针泛起水纹 · 点击水面喂鱼</p>
+    <noscript>请启用 JavaScript 查看动态游鱼。</noscript>
+    <script>
+      import { createKoiPond } from '../scripts/koi-pond';
+      const canvas = document.querySelector<HTMLCanvasElement>('#pond');
+      if (canvas) createKoiPond(canvas, { feed: true, floor: '/assets/riverbed-background.webp' });
+    </script>
+  </body>
+</html>
+<style>
+  :global(:root) { --bg-0: #0a191d; --blue: #7aafb6; --ink-0: #e2e8db; --font-mono: 'Courier New', monospace; color-scheme: dark; }
+  :global(body) { margin: 0; background: var(--bg-0); color: var(--ink-0); font-family: system-ui, sans-serif; }
+  #pond { display: block; width: 100%; height: 100svh; }
+  header { position: fixed; inset: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 24px 32px; pointer-events: none; }
+  h1 { margin: 0; font-size: 17px; font-weight: 400; letter-spacing: 0.14em; }
+  h1 span { margin-left: 12px; font: 11px var(--font-mono); opacity: 0.55; letter-spacing: 0.2em; }
+  a { color: inherit; font-size: 12px; text-underline-offset: 5px; pointer-events: auto; }
+  a:focus-visible { outline: 2px solid currentColor; outline-offset: 6px; }
+  .hint { position: fixed; bottom: 20px; left: 0; right: 0; margin: 0; text-align: center; font-size: 11px; letter-spacing: 0.12em; opacity: 0.65; pointer-events: none; }
+  noscript { position: fixed; top: 50%; left: 24px; }
+  @media (max-width: 600px) { header { padding: 20px; } }
+</style>
