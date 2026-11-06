@@ -37,7 +37,7 @@ notes:
 
 解决垂直领域 RAG 幻觉的本质，不是在生成阶段搞昂贵的事后反思，而是在入库与检索阶段完成“事实的源头净化”。
 
-OG-RAG 的精髓在于：用**领域本体**锁定实体关系的合法边界，用**无损展平**把深层树状结构拍成宽表键值对，用**超边**死死捆绑横向共存的事实；最后在检索时做到** 0 次大模型调用**，以毫秒级延迟向 LLM 投喂毫无噪音的事实字典。
+OG-RAG 的精髓在于：用**领域本体**锁定实体关系的合法边界，用**无损展平**把深层树状结构拍成宽表键值对，用**超边**死死捆绑横向共存的事实；最后在检索时做到 **0 次大模型调用**，以毫秒级延迟向 LLM 投喂毫无噪音的事实字典。
 
 </div>
 
@@ -51,52 +51,55 @@ OG-RAG 的第一道工序，是引入了**领域本体（Domain Ontology）**。
 
 别被这个带有哲学色彩的名词唬住。在程序员的语境里，**本体本质上就是一套增强版的业务 ER 图（Entity-Relationship Schema）或严谨的接口规范（Interface）**。它用机器可读的词汇表，明确界定了这个领域里有哪些合法的实体类型、它们拥有哪些属性、以及实体之间允许存在哪些从属关系。
 
-<figure class="diagram-figure">
-<div class="diagram-container">
-<div class="diagram-header">
-<span class="diagram-eyebrow">01 · INGESTION &amp; DISTILLATION</span>
-<span class="diagram-title">领域本体约束下的事实熔炼</span>
-</div>
-
-<div class="arch-flow">
-<div class="arch-branch-grid">
-<div class="arch-card">
-<div class="card-meta">
-<span class="badge badge-accent">INPUT A · 矿石</span>
-<span class="card-role">Raw Document</span>
-</div>
-<div class="card-title">非结构化行业文档</div>
-<p class="card-desc">充斥着自然语言修辞、过渡句与长程修饰语，存在大量非事实性上下文噪音</p>
-</div>
-
-<div class="arch-card">
-<div class="card-meta">
-<span class="badge badge-host">INPUT B · 模具</span>
-<span class="card-role">Controlled Schema</span>
-</div>
-<div class="card-title">领域本体规范（Ontology）</div>
-<p class="card-desc">严格界定合法实体类型、核心属性字段以及实体间允许存在的从属关系边界</p>
-</div>
-</div>
-
-<div class="flow-arrow flow-arrow-accent">
-<svg width="16" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-<path d="M12 5v14M19 12l-7 7-7-7"></path>
+<figure class="fig" data-no-focus>
+<div class="fig-scroll">
+<svg viewBox="0 0 720 286" role="img" aria-label="入库熔炼：原始段落在领域本体约束下，被离线 LLM 提炼为自包含的事实块 F，原文随后丢弃">
+<defs><marker id="f1-ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="ah" d="M1 1.5 L8 5 L1 8.5"/></marker></defs>
+<text x="0" y="14" class="s t2">原始段落 · 农艺手册</text>
+<rect class="bx" x="0.5" y="24.5" width="200" height="228" rx="6"/>
+<text x="16" y="54" class="t2">几十年来，农户们常感慨</text><path class="ln" d="M16 49.5 H153.5"/>
+<text x="16" y="79" class="t2">春播时节气候多变难测。</text><path class="ln" d="M16 74.5 H147"/>
+<text x="16" y="104" class="t2">经多轮田间试验对比表明，</text><path class="ln" d="M16 99.5 H159.5"/>
+<rect class="bar-a" x="8" y="117" width="2" height="16"/><text x="16" y="129" class="t0">大豆（Soybean）良种</text>
+<rect class="bar-b" x="8" y="142" width="2" height="16"/><text x="16" y="154" class="t0">适宜在西北地区种植，</text>
+<rect class="bar-t" x="8" y="167" width="2" height="16"/><text x="16" y="179" class="t0">推荐播种量 75kg/ha。</text>
+<text x="16" y="204" class="t2">望各地农技站务必高度</text><path class="ln" d="M16 199.5 H141"/>
+<text x="16" y="229" class="t2">重视，切莫错过农时。</text><path class="ln" d="M16 224.5 H134.5"/>
+<text x="0" y="278" class="s t2">✕ 熔炼完成后，原文不再入库</text>
+<path class="ln" d="M206 72 H512" marker-end="url(#f1-ar)"/>
+<text x="359" y="62" class="t0" text-anchor="middle">离线 LLM 按本体抽取</text>
+<path class="ln dash" d="M360 100 V80" marker-end="url(#f1-ar)"/>
+<text x="368" y="93" class="s t2">约束能抽的字段与关系</text>
+<rect class="bx" x="232.5" y="100.5" width="256" height="152" rx="6"/>
+<text x="246" y="120" class="s t2">领域本体（模具）</text>
+<path class="ln" d="M258 151 V236 M258 166 H270 M258 189 H270 M258 236 H270"/>
+<rect class="bx sa" x="246.5" y="128.5" width="52" height="22" rx="4"/>
+<text x="272.5" y="143.5" class="m ca" text-anchor="middle">Seed</text>
+<text x="276" y="170" class="m">of crop</text><text x="480" y="170" class="s t2" text-anchor="end">文本</text>
+<text x="276" y="193" class="m">is grown in</text>
+<path class="ln" d="M354 190.5 H362"/>
+<rect class="bx sb" x="362.5" y="180.5" width="96" height="20" rx="4"/>
+<text x="410.5" y="194.5" class="m cb" text-anchor="middle">Crop Region</text>
+<path class="ln" d="M380 201 V211 H390"/>
+<text x="396" y="215" class="m">has name</text><text x="480" y="215" class="s t2" text-anchor="end">文本</text>
+<text x="276" y="240" class="m">recommended seed rate</text><text x="480" y="240" class="s t2" text-anchor="end">数量</text>
+<text x="520" y="14" class="s t2">事实块 F（JSON-LD）</text>
+<rect class="bx" x="520.5" y="24.5" width="199" height="228" rx="6"/>
+<rect class="bar-a" x="528" y="40" width="2" height="38"/>
+<text x="538" y="52" class="m s t2">of crop</text>
+<text x="538" y="72" class="m l t0">Soybean</text>
+<rect class="bar-b" x="528" y="90" width="2" height="38"/>
+<text x="538" y="102" class="m s t2">is grown in › has name</text>
+<text x="538" y="122" class="m l t0">Northwest Region</text>
+<rect class="bar-t" x="528" y="140" width="2" height="38"/>
+<text x="538" y="152" class="m s t2">recommended seed rate</text>
+<text x="538" y="172" class="m l t0">75kg/ha</text>
+<path class="hair" d="M538 198 H704"/>
+<text x="538" y="222" class="s t2">自包含：主语、关系、数值</text>
+<text x="538" y="240" class="s t2">都在块内，脱离原文也成立</text>
 </svg>
-<span class="arrow-label highlight">离线驱动 LLM：按 Schema 定向熔炼（彻底抛弃无关自然语言）</span>
 </div>
-
-<div class="arch-card">
-<div class="card-meta">
-<span class="badge badge-teal">OUTPUT · 黄金</span>
-<span class="card-role">Structured Facts</span>
-</div>
-<div class="card-title">自包含事实块 JSON-LD（Factual Block <i>F</i>）</div>
-<p class="card-desc">高度提纯的自包含原子事实。后续检索与 Context 组装完全基于事实骨架，原始文本彻底抛弃</p>
-</div>
-</div>
-</div>
-<figcaption>图 1：入库熔炼流程。领域本体充当受控模具，引导离线 LLM 将长文本提纯为自包含的事实块 JSON-LD，从源头杜绝文本噪音。</figcaption>
+<figcaption><b>图 1</b>入库熔炼。领域本体只规定「能抽什么」：哪些实体、哪些属性、实体之间允许哪些关系。离线 LLM 照着它从段落里取出事实，修辞和过渡句一律丢掉。左侧色条标出同一条事实在原文和事实块里的对应位置。</figcaption>
 </figure>
 
 在入库预处理阶段，大模型不再是无脑切块机，而是严格按图索骥的熔炼工：
@@ -136,76 +139,51 @@ OG-RAG 的第一道工序，是引入了**领域本体（Domain Ontology）**。
 
 论文在第 4.1.2 节提出了核心的 **无损展平算法（Lossless Flattening, Algorithm 1）**。
 
-<figure class="diagram-figure">
-<div class="diagram-container">
-<div class="diagram-header">
-<span class="diagram-eyebrow">02 · DATA STRUCTURE</span>
-<span class="diagram-title">无损展平算法与超图拓扑绑定</span>
-</div>
-
-<div class="arch-flow">
-<div class="arch-card">
-<div class="card-meta">
-<span class="badge badge-accent">PHASE 1 · NESTED TREE</span>
-<span class="card-role">Hierarchical JSON</span>
-</div>
-<div class="card-title">原始嵌套树状事实块</div>
-<p class="card-desc" style="margin-bottom: 8px;">层层套娃的多层级实体结构（深层嵌套属性难以直接做向量检索）：</p>
-<div style="font-family: var(--font-mono); font-size: 12.5px; line-height: 1.8; background: var(--bg-1); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--line-soft);">
-<span style="color: var(--accent);">Seed</span> <span style="color: var(--ink-2);">──[of crop]──&gt;</span> <span style="color: var(--teal); font-weight: 500;">"Soybean"</span><br>
-<span style="color: var(--accent); margin-left: 28px;">└──[is grown in]──&gt;</span> <span style="color: var(--blue);">Crop Region</span> <span style="color: var(--ink-2);">──[has name]──&gt;</span> <span style="color: var(--teal); font-weight: 500;">"Northwest"</span>
-</div>
-</div>
-
-<div class="flow-arrow">
-<svg width="16" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-<path d="M12 5v14M19 12l-7 7-7-7"></path>
+<figure class="fig" data-no-focus>
+<div class="fig-scroll">
+<svg viewBox="0 0 720 336" role="img" aria-label="无损展平：嵌套事实块的三条根到叶路径被拼接为三个超节点（Key, Value），它们同属一条超边 e₁">
+<text x="0" y="14" class="s t2">嵌套事实块（树）</text>
+<path class="ln" d="M64.5 88.5 H96"/>
+<path class="ln sa" d="M96 88.5 V37.5 H270"/>
+<path class="ln sb" d="M96 88.5 H270 M371 88.5 H470"/>
+<path class="ln st" d="M96 88.5 V140.5 H270"/>
+<rect class="bx sa" x="0.5" y="74.5" width="64" height="28" rx="5"/>
+<text x="32.5" y="92.5" class="m ca b" text-anchor="middle">Seed</text>
+<text x="108" y="31" class="m">of crop</text>
+<text x="108" y="82" class="m">is grown in</text>
+<text x="108" y="134" class="m">recommended seed rate</text>
+<rect class="bx" x="270.5" y="24.5" width="96" height="26" rx="5"/>
+<text x="318.5" y="41.5" class="m t0" text-anchor="middle">"Soybean"</text>
+<rect class="bx sb" x="270.5" y="75.5" width="100" height="26" rx="5"/>
+<text x="320.5" y="92.5" class="m cb" text-anchor="middle">Crop Region</text>
+<text x="382" y="82" class="m">has name</text>
+<rect class="bx" x="470.5" y="75.5" width="140" height="26" rx="5"/>
+<text x="540.5" y="92.5" class="m t0" text-anchor="middle">"Northwest Region"</text>
+<rect class="bx" x="270.5" y="127.5" width="96" height="26" rx="5"/>
+<text x="318.5" y="144.5" class="m t0" text-anchor="middle">"75kg/ha"</text>
+<path class="hair" d="M0 186 H262 M458 186 H720"/>
+<text x="360" y="190.5" text-anchor="middle">↓ 把根到叶的路径用 ⊕ 拼成 Key</text>
+<text x="0" y="220" class="s t2">展平后的超节点 n = (Key, Value)</text>
+<text x="0" y="252" class="m t2">n₁</text>
+<text x="32" y="252" class="m t0">Seed <tspan class="t2">⊕</tspan> of crop</text>
+<text x="420" y="252" class="t2">→</text>
+<text x="448" y="252" class="m ca">"Soybean"</text>
+<path class="hair" d="M0 266 H560"/>
+<text x="0" y="286" class="m t2">n₂</text>
+<text x="32" y="286" class="m t0">Seed <tspan class="t2">⊕</tspan> is grown in <tspan class="t2">⊕</tspan> Crop Region <tspan class="t2">⊕</tspan> has name</text>
+<text x="420" y="286" class="t2">→</text>
+<text x="448" y="286" class="m cb">"Northwest Region"</text>
+<path class="hair" d="M0 300 H560"/>
+<text x="0" y="320" class="m t2">n₃</text>
+<text x="32" y="320" class="m t0">Seed <tspan class="t2">⊕</tspan> recommended seed rate</text>
+<text x="420" y="320" class="t2">→</text>
+<text x="448" y="320" class="m ct">"75kg/ha"</text>
+<path class="ln" d="M584 238 H592 V326 H584"/>
+<text x="604" y="278" class="t0 b">超边 e₁</text>
+<text x="604" y="298" class="s t2">同一个事实块</text>
 </svg>
-<span class="arrow-label">递归路径级联拼接（⊕ · 相当于多表 LEFT JOIN 反范式宽表）</span>
 </div>
-
-<div class="arch-card">
-<div class="card-meta">
-<span class="badge badge-host">PHASE 2 · HYPERNODES</span>
-<span class="card-role">Flattened Key-Values</span>
-</div>
-<div class="card-title">展平后的超节点集合（Hypernodes）</div>
-<p class="card-desc" style="margin-bottom: 8px;">Key 压缩完整因果推导链路，Value 承载具体的离散数值与字面量：</p>
-<div style="display: flex; flex-direction: column; gap: 6px;">
-<div class="kv-pill">
-<span class="kv-key">n₁: Key = "Seed of crop"</span>
-<span class="kv-sep">→</span>
-<span class="kv-val">Value = "Soybean"</span>
-</div>
-<div class="kv-pill">
-<span class="kv-key">n₂: Key = "Seed is grown in Crop Region has name"</span>
-<span class="kv-sep">→</span>
-<span class="kv-val">Value = "Northwest Region"</span>
-</div>
-</div>
-</div>
-
-<div class="flow-arrow flow-arrow-accent">
-<svg width="16" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-<path d="M12 5v14M19 12l-7 7-7-7"></path>
-</svg>
-<span class="arrow-label highlight">实例级横向绑定（合取闭包 · 锁定同一主语实例）</span>
-</div>
-
-<div class="arch-card">
-<div class="card-meta">
-<span class="badge badge-teal">PHASE 3 · HYPEREDGE</span>
-<span class="card-role">Conjunctive Closure (AND)</span>
-</div>
-<div class="card-title">打包为不可分割的超边（Hyperedge）</div>
-<p class="card-desc" style="margin-bottom: 8px;">充当“大回形针”，同一事实块派生的超节点紧密捆绑，物理阻断多实体混淆：</p>
-<div style="font-family: var(--font-mono); font-size: 13px; color: var(--teal); background: var(--bg-1); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--line-soft);">
-e₁ = { n₁, n₂ } &nbsp;<span style="color: var(--ink-2); font-size: 12px;">// 同一实例下的全部超节点形成合取闭包</span>
-</div>
-</div>
-</div>
-</div>
-<figcaption>图 2：无损展平（Lossless Flattening）与超边绑定机制。纵向用全路径拼接压实属性 Key，横向用超边打包多属性共存实例，避免多实体同名属性的交叉污染。</figcaption>
+<figcaption><b>图 2</b>无损展平（Algorithm 1）。从根实体 Seed 出发，把沿途经过的关系名用 ⊕ 拼进 Key，叶子上的字面量作为 Value。三条路径变成三个超节点，中间每一层语义都还在；它们出自同一个事实块，所以同属一条超边 e₁（见 2.2）。</figcaption>
 </figure>
 
 ### 2.1 超节点（Hypernode）：纵向语义路径的压实
@@ -220,12 +198,49 @@ e₁ = { n₁, n₂ } &nbsp;<span style="color: var(--ink-2); font-size: 12px;">
 这里有一个非常深刻的问题：**既然超节点的 Key 已经记录了完整路径，为什么还需要超边？**
 
 因为 Key 只记录了通用路径名，并没有写具体的主语实例！  
-如果知识库里同时有“大豆”和“水稻”的数据，库里会有两条超节点都叫 `("...is grown in Crop Region has name", "Northwest")`。如果节点各自孤立，检索系统根本分不清“西北”到底是跟大豆配对还是跟水稻配对——**这就又退化成了张冠李戴的幻觉灾难**。
+如果知识库里同时有“大豆”和“春小麦”的数据，库里会有两条超节点都叫 `("...is grown in Crop Region has name", "Northwest")`。如果节点各自孤立，检索系统根本分不清“西北”到底是跟大豆配对还是跟春小麦配对——**这就又退化成了张冠李戴的幻觉灾难**。
 
 **超边（Hyperedge）的作用，就是在物理上充当一枚不可分割的“大回形针”：**
-* 凡是由**同一个 JSON-LD 事实块（同一个根实体实例）**展平出来的所有超节点，自动归属于同一条超边；
+* 凡是由<strong>同一个 JSON-LD 事实块（同一个根实体实例）</strong>展平出来的所有超节点，自动归属于同一条超边；
 * 在逻辑学上，一条超边代表一个**复合事实（Composite Fact）的合取闭包（AND）**：  
   $$\text{超边 } e = \left\{ n_1, n_2, n_3 \right\} \iff \text{存在一个具体的作物 } X，\text{它既叫大豆，且生长在西北，且播种量为 75kg/ha}$$
+
+<figure class="fig" data-no-focus>
+<div class="fig-scroll">
+<svg viewBox="0 0 720 266" role="img" aria-label="对比：没有超边时，两个相同的「种植区 = 西北」节点无法分辨归属；有超边时，大豆和春小麦各自的节点被绑成一组">
+<text x="0" y="16" class="t0 b">A · 只有超节点</text>
+<text x="0" y="36" class="s t2">检索拿回来的是一袋散装键值</text>
+<text x="380" y="16" class="t0 b">B · 加上超边</text>
+<text x="380" y="36" class="s t2">同一事实块的节点绑成一组，整组取用</text>
+<path class="hair" d="M360 4 V256"/>
+<path class="ln dash" d="M40 91 V120"/>
+<text x="48" y="110" class="s t2">?</text>
+<path class="ln dash sr" d="M110 91 L214 180"/>
+<text x="176" y="140" class="s cr">?</text>
+<rect class="bx" x="0.5" y="60.5" width="128" height="30" rx="5"/><text x="64.5" y="80" class="t0" text-anchor="middle">作物 = 大豆</text>
+<rect class="bx" x="200.5" y="60.5" width="128" height="30" rx="5"/><text x="264.5" y="80" text-anchor="middle">种植区 = 西北</text>
+<rect class="bx" x="0.5" y="120.5" width="128" height="30" rx="5"/><text x="64.5" y="140" text-anchor="middle">地温 = 12℃</text>
+<rect class="bx" x="212.5" y="120.5" width="128" height="30" rx="5"/><text x="276.5" y="140" text-anchor="middle">作物 = 春小麦</text>
+<rect class="bx" x="0.5" y="180.5" width="128" height="30" rx="5"/><text x="64.5" y="200" text-anchor="middle">种植区 = 西北</text>
+<rect class="bx" x="200.5" y="180.5" width="128" height="30" rx="5"/><text x="264.5" y="200" text-anchor="middle">地温 = 10℃</text>
+<text x="0" y="248" class="s cr">✕ 两个「种植区 = 西北」一模一样，10℃ 也可能被配给大豆</text>
+<rect class="ln dash sa tint-a" x="380.5" y="52.5" width="156" height="170" rx="10"/>
+<rect class="ln dash sb tint-b" x="556.5" y="52.5" width="156" height="170" rx="10"/>
+<text x="394" y="74" class="m ca">e₁ · 大豆</text>
+<text x="570" y="74" class="m cb">e₂ · 春小麦</text>
+<path class="ln sa" d="M458.5 116.5 V132.5 M458.5 162.5 V178.5"/>
+<path class="ln sb" d="M634.5 116.5 V132.5 M634.5 162.5 V178.5"/>
+<rect class="bx" x="394.5" y="86.5" width="128" height="30" rx="5"/><text x="458.5" y="106" class="t0" text-anchor="middle">作物 = 大豆</text>
+<rect class="bx" x="394.5" y="132.5" width="128" height="30" rx="5"/><text x="458.5" y="152" text-anchor="middle">种植区 = 西北</text>
+<rect class="bx" x="394.5" y="178.5" width="128" height="30" rx="5"/><text x="458.5" y="198" text-anchor="middle">地温 = 12℃</text>
+<rect class="bx" x="570.5" y="86.5" width="128" height="30" rx="5"/><text x="634.5" y="106" class="t0" text-anchor="middle">作物 = 春小麦</text>
+<rect class="bx" x="570.5" y="132.5" width="128" height="30" rx="5"/><text x="634.5" y="152" text-anchor="middle">种植区 = 西北</text>
+<rect class="bx" x="570.5" y="178.5" width="128" height="30" rx="5"/><text x="634.5" y="198" text-anchor="middle">地温 = 10℃</text>
+<text x="380" y="248" class="s ct">✓ 问「大豆的播种地温」，只会取到 e₁ 里的 12℃</text>
+</svg>
+</div>
+<figcaption><b>图 3</b>为什么还需要超边。两种作物都种在西北，展平后会出现两个一模一样的「种植区 = 西北」。A：节点各自独立，检索拿回来的是一袋散装键值，大豆该配 12℃ 还是 10℃ 无从判断。B：超边把同一事实块的节点绑成一组，取就整组取，不会串。</figcaption>
+</figure>
 
 ---
 
@@ -236,100 +251,64 @@ e₁ = { n₁, n₂ } &nbsp;<span style="color: var(--ink-2); font-size: 12px;">
 但当你仔细剖析论文的算法流程（Algorithm 2）和复杂度证明时，你会发现作者展现出了极高的**工程克制力**：  
 **整套系统根本没有使用 Neo4j 这类重量级图数据库，而是用极其质朴的“向量索引 + 内存倒排字典 + 贪心算法”跑通了全流程。**
 
-<figure class="diagram-figure">
-<div class="diagram-container">
-<div class="diagram-header">
-<span class="diagram-eyebrow">03 · ONLINE RETRIEVAL ENGINE</span>
-<span class="diagram-title">0 次 LLM 调用的毫秒级检索流水线</span>
-</div>
-
-<div class="arch-flow">
-<div class="arch-card">
-<div class="card-meta">
-<span class="badge badge-accent">STAGE 1 · QUERY ENTRY</span>
-<span class="card-role">Natural Language</span>
-</div>
-<div class="card-title">用户自然语言提问（Query <i>Q</i>）</div>
-<p class="card-desc">用户输入问题，系统仅执行 1 次基础向量 Embedding，全程无任何大模型交互</p>
-</div>
-
-<div class="flow-arrow">
-<svg width="16" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-<path d="M12 5v14M19 12l-7 7-7-7"></path>
+<figure class="fig" data-no-focus>
+<div class="fig-scroll">
+<svg viewBox="0 0 720 390" role="img" aria-label="OG-RAG 在线检索：问题向量分别匹配 Key 与 Value，得到 6 个候选超节点，经倒排 Hash 查出所属超边，再交给贪心集合覆盖；检索期不调用 LLM">
+<defs><marker id="f4-ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="ah" d="M1 1.5 L8 5 L1 8.5"/></marker></defs>
+<text x="0" y="90" class="s t2">用户提问</text>
+<rect class="bx sa" x="0.5" y="100.5" width="150" height="110" rx="6"/>
+<text x="14" y="128" class="t0">西北地区播种大豆</text>
+<text x="14" y="149" class="t0">和春小麦，在温度</text>
+<text x="14" y="170" class="t0">要求上有什么不同？</text>
+<text x="14" y="198" class="m s t2">Embedding × 1</text>
+<path class="ln" d="M151 140 C170 140 168 76 186 76" marker-end="url(#f4-ar)"/>
+<path class="ln" d="M151 172 C170 172 168 228 186 228" marker-end="url(#f4-ar)"/>
+<rect class="bx" x="190.5" y="24.5" width="236" height="104" rx="6"/>
+<text x="204" y="47" class="t0 b">A · 匹配 Key</text>
+<text x="412" y="47" class="s t2" text-anchor="end">知关系，求答案</text>
+<text x="204" y="74" class="m t2">n₃</text><text x="228" y="74"><tspan class="t0">作物.播种地温</tspan> → 12℃</text>
+<text x="204" y="96" class="m t2">n₅</text><text x="228" y="96"><tspan class="t0">作物.播种地温</tspan> → 10℃</text>
+<text x="204" y="118" class="m t2">n₆</text><text x="228" y="118" class="t2">作物.推荐播种量 → 75kg/ha</text>
+<rect class="bx" x="190.5" y="176.5" width="236" height="104" rx="6"/>
+<text x="204" y="199" class="t0 b">B · 匹配 Value</text>
+<text x="412" y="199" class="s t2" text-anchor="end">知线索，求背景</text>
+<text x="204" y="226" class="m t2">n₁</text><text x="228" y="226">作物.名称 → <tspan class="t0">大豆</tspan></text>
+<text x="204" y="248" class="m t2">n₄</text><text x="228" y="248">作物.名称 → <tspan class="t0">春小麦</tspan></text>
+<text x="204" y="270" class="m t2">n₂</text><text x="228" y="270">作物.种植区.名称 → <tspan class="t0">西北地区</tspan></text>
+<path class="ln" d="M427 76 C446 76 444 138 460 138" marker-end="url(#f4-ar)"/>
+<path class="ln" d="M427 228 C446 228 444 166 460 166" marker-end="url(#f4-ar)"/>
+<rect class="bx" x="464.5" y="24.5" width="255" height="268" rx="6"/>
+<text x="478" y="47" class="t0 b">倒排 Hash：超节点 → 超边</text>
+<text x="478" y="66" class="s t2">Top-2k = 6 个候选，各查一次，O(1)</text>
+<path class="hair" d="M478 78 H706"/>
+<text x="478" y="100" class="m t2">n₁</text><text x="502" y="100" class="t0">大豆</text><text x="584" y="100" class="t2">→</text><text x="604" y="100" class="m ca">001</text>
+<text x="478" y="124" class="m t2">n₂</text><text x="502" y="124" class="t0">西北地区</text><text x="584" y="124" class="t2">→</text><text x="604" y="124" class="m"><tspan class="ca">001</tspan> <tspan class="cb">005</tspan></text>
+<text x="478" y="148" class="m t2">n₃</text><text x="502" y="148" class="t0">12℃</text><text x="584" y="148" class="t2">→</text><text x="604" y="148" class="m"><tspan class="ca">001</tspan> <tspan class="cm">008</tspan></text>
+<text x="478" y="172" class="m t2">n₄</text><text x="502" y="172" class="t0">春小麦</text><text x="584" y="172" class="t2">→</text><text x="604" y="172" class="m cb">005</text>
+<text x="478" y="196" class="m t2">n₅</text><text x="502" y="196" class="t0">10℃</text><text x="584" y="196" class="t2">→</text><text x="604" y="196" class="m cb">005</text>
+<text x="478" y="220" class="m t2">n₆</text><text x="502" y="220" class="t0">75kg/ha</text><text x="584" y="220" class="t2">→</text><text x="604" y="220" class="m ca">001</text>
+<path class="hair" d="M478 236 H706"/>
+<text x="478" y="258" class="s t2">命中数</text>
+<text x="524" y="258" class="m"><tspan class="ca">001</tspan> ×4</text><text x="588" y="258" class="m"><tspan class="cb">005</tspan> ×3</text><text x="652" y="258" class="m"><tspan class="cm">008</tspan> ×1</text>
+<text x="478" y="280" class="s t2">→ 交给贪心集合覆盖（图 5）</text>
+<path class="hair" d="M0 340 H720"/>
+<text x="60" y="328" class="s" text-anchor="middle">问题 Embedding</text>
+<text x="204" y="328" class="s" text-anchor="middle">双路向量 Top-k</text>
+<text x="348" y="328" class="s" text-anchor="middle">倒排 Hash 反查</text>
+<text x="492" y="328" class="s" text-anchor="middle">贪心集合覆盖</text>
+<text x="650" y="328" class="s" text-anchor="middle">LLM 生成回答</text>
+<circle class="ct" cx="60" cy="340" r="3.5"/>
+<circle class="ct" cx="204" cy="340" r="3.5"/>
+<circle class="ct" cx="348" cy="340" r="3.5"/>
+<circle class="ct" cx="492" cy="340" r="3.5"/>
+<circle class="ca" cx="650" cy="340" r="3.5"/>
+<path class="ln st" d="M0.5 352 V358 H590 V352"/>
+<text x="295" y="378" class="s ct" text-anchor="middle">检索期：0 次 LLM 调用</text>
+<path class="ln sa" d="M612 352 V358 H719.5 V352"/>
+<text x="666" y="378" class="s ca" text-anchor="middle">1 次 LLM 调用</text>
 </svg>
-<span class="arrow-label">向量广播：并发双路余弦相似度检索</span>
 </div>
-
-<div class="arch-branch-grid">
-<div class="arch-card">
-<div class="card-meta">
-<span class="badge badge-host">DUAL-ROUTE A</span>
-<span class="card-role">Key Matching</span>
-</div>
-<div class="card-title">与 Key 向量匹配（Top-k）</div>
-<p class="card-desc"><strong>知关系求答案</strong>：提问含概念/指标，命中路径属性后自动带出背后的离散值（如求温度要求）</p>
-</div>
-
-<div class="arch-card">
-<div class="card-meta">
-<span class="badge badge-host">DUAL-ROUTE B</span>
-<span class="card-role">Value Matching</span>
-</div>
-<div class="card-title">与 Value 向量匹配（Top-k）</div>
-<p class="card-desc"><strong>知线索求背景</strong>：提问含实体字面量，命中具体数值/专有名词后逆向牵引整条属性路径</p>
-</div>
-</div>
-
-<div class="flow-arrow">
-<svg width="16" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-<path d="M12 5v14M19 12l-7 7-7-7"></path>
-</svg>
-<span class="arrow-label">合并候选：得到 Top-2k 个候选超节点</span>
-</div>
-
-<div class="arch-card">
-<div class="card-meta">
-<span class="badge badge-teal">STAGE 2 · IN-MEMORY HASH</span>
-<span class="card-role">O(1) Reverse Lookup</span>
-</div>
-<div class="card-title">内存倒排 Hash 字典反查</div>
-<p class="card-desc">跳过图数据库的深层遍历开销，在内存中以 O(1) 时间复杂度瞬间查出每个候选超节点归属的超边列表</p>
-</div>
-
-<div class="flow-arrow flow-arrow-accent">
-<svg width="16" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-<path d="M12 5v14M19 12l-7 7-7-7"></path>
-</svg>
-<span class="arrow-label highlight">单机耗时 &lt; 5ms：纯代数循环求解</span>
-</div>
-
-<div class="arch-card">
-<div class="card-meta">
-<span class="badge badge-sandbox">STAGE 3 · GREEDY SELECTION</span>
-<span class="card-role">Set Cover Algorithm</span>
-</div>
-<div class="card-title">贪心集合覆盖（Set Cover）</div>
-<p class="card-desc">以最少数量的超边最大化覆盖候选超节点，严格受超边上限 <i>L</i> 约束，彻底阻断 Context 膨胀</p>
-</div>
-
-<div class="flow-arrow flow-arrow-accent">
-<svg width="16" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-<path d="M12 5v14M19 12l-7 7-7-7"></path>
-</svg>
-<span class="arrow-label highlight">注入 Prompt 上下文（仅包含结构化事实）</span>
-</div>
-
-<div class="arch-card">
-<div class="card-meta">
-<span class="badge badge-accent">STAGE 4 · GENERATION</span>
-<span class="card-role">Single LLM Call</span>
-</div>
-<div class="card-title">交付事实字典列表并生成答复</div>
-<p class="card-desc">以极简键值字典形式向大模型投喂精准事实。大模型仅需专注综合表述，零幻觉完成最终答复</p>
-</div>
-</div>
-</div>
-<figcaption>图 3：OG-RAG 在线检索架构。通过双路向量匹配召回超节点，利用内存倒排 Hash 与贪心集合覆盖在数毫秒内完成实体闭包收束，整个检索期 0 次大模型调用。</figcaption>
+<figcaption><b>图 4</b>在线检索全流程（Algorithm 2），以第 4 节的提问为例。问题只做一次 Embedding，分别和 Key、Value 两套向量算相似度，各取 Top-k（这里 k = 3，所以「推荐播种量」这类弱相关项也会被凑进来）。6 个候选超节点各查一次倒排表，得到所属超边。检索期全程不调用 LLM，唯一的一次调用在最后生成回答。</figcaption>
 </figure>
 
 ### 3.1 双路向量召回（Top-2k）：攻克语义鸿沟
@@ -346,7 +325,7 @@ e₁ = { n₁, n₂ } &nbsp;<span style="color: var(--ink-2); font-size: 12px;">
 # 纯内存倒排字典：哪个超节点被哪几条超边包含？
 inverted_index = {
     ("作物.种植区.名称", "西北地区"): ["超边_001_大豆", "超边_005_春小麦"],
-    ("作物.播种地温", "10~12℃"):     ["超边_001_大豆", "超边_008_玉米"],
+    ("作物.播种地温", "12℃"):        ["超边_001_大豆", "超边_008_玉米"],
     ("作物.推荐播种量", "75kg/ha"):    ["超边_001_大豆"]
 }
 ```
@@ -358,6 +337,65 @@ inverted_index = {
 1. 统计当前未覆盖的超节点，找到能**覆盖最多未覆盖节点**的那一条超边；
 2. 将这条超边加入上下文集合，并将它覆盖的节点从待办列表中划掉；
 3. 循环往复，直到所有超节点全被覆盖，或者达到预设的超边上限 $L$（防止 Context 膨胀）。
+
+<figure class="fig" data-no-focus>
+<div class="fig-scroll">
+<svg viewBox="0 0 720 254" role="img" aria-label="贪心集合覆盖：第 1 轮选中覆盖 4 个候选节点的超边 001，第 2 轮选中新增覆盖 2 个的 005，全部覆盖后停止，008 未入选">
+<text x="150" y="20" class="m t2" text-anchor="middle">n₁</text>
+<text x="214" y="20" class="m t2" text-anchor="middle">n₂</text>
+<text x="278" y="20" class="m t2" text-anchor="middle">n₃</text>
+<text x="342" y="20" class="m t2" text-anchor="middle">n₄</text>
+<text x="406" y="20" class="m t2" text-anchor="middle">n₅</text>
+<text x="470" y="20" class="m t2" text-anchor="middle">n₆</text>
+<text x="0" y="40" class="s t2">候选超边</text>
+<text x="150" y="40" class="s" text-anchor="middle">大豆</text>
+<text x="214" y="40" class="s" text-anchor="middle">西北</text>
+<text x="278" y="40" class="s" text-anchor="middle">12℃</text>
+<text x="342" y="40" class="s" text-anchor="middle">春小麦</text>
+<text x="406" y="40" class="s" text-anchor="middle">10℃</text>
+<text x="470" y="40" class="s" text-anchor="middle">75kg/ha</text>
+<text x="548" y="20" class="s t2" text-anchor="middle">第 1 轮</text>
+<text x="604" y="20" class="s t2" text-anchor="middle">第 2 轮</text>
+<text x="548" y="40" class="m t2" text-anchor="middle">Δ</text>
+<text x="604" y="40" class="m t2" text-anchor="middle">Δ</text>
+<text x="640" y="40" class="s t2">结果</text>
+<path class="hair" d="M0 52 H720"/>
+<text x="0" y="80.5"><tspan class="m ca">001</tspan><tspan class="t0"> 大豆</tspan></text>
+<circle class="dot-a" cx="150" cy="76" r="5.5"/><circle class="dot-a" cx="214" cy="76" r="5.5"/><circle class="dot-a" cx="278" cy="76" r="5.5"/><circle class="dot-0" cx="342" cy="76" r="1.5"/><circle class="dot-0" cx="406" cy="76" r="1.5"/><circle class="dot-a" cx="470" cy="76" r="5.5"/>
+<rect class="ln sa" x="536.5" y="64.5" width="23" height="23" rx="4"/>
+<text x="548" y="80.5" class="m ca b" text-anchor="middle">4</text>
+<text x="604" y="80.5" class="m t2" text-anchor="middle">—</text>
+<text x="640" y="80.5" class="s ca">第 1 轮选中</text>
+<path class="hair" d="M0 96 H720"/>
+<text x="0" y="120.5"><tspan class="m cb">005</tspan><tspan class="t0"> 春小麦</tspan></text>
+<circle class="dot-0" cx="150" cy="116" r="1.5"/><circle class="dot-b" cx="214" cy="116" r="5.5"/><circle class="dot-0" cx="278" cy="116" r="1.5"/><circle class="dot-b" cx="342" cy="116" r="5.5"/><circle class="dot-b" cx="406" cy="116" r="5.5"/><circle class="dot-0" cx="470" cy="116" r="1.5"/>
+<text x="548" y="120.5" class="m" text-anchor="middle">3</text>
+<rect class="ln sb" x="592.5" y="104.5" width="23" height="23" rx="4"/>
+<text x="604" y="120.5" class="m cb b" text-anchor="middle">2</text>
+<text x="640" y="120.5" class="s cb">第 2 轮选中</text>
+<path class="hair" d="M0 136 H720"/>
+<text x="0" y="160.5"><tspan class="m cm">008</tspan><tspan class="t0"> 玉米</tspan></text>
+<circle class="dot-0" cx="150" cy="156" r="1.5"/><circle class="dot-0" cx="214" cy="156" r="1.5"/><circle class="dot-m" cx="278" cy="156" r="5.5"/><circle class="dot-0" cx="342" cy="156" r="1.5"/><circle class="dot-0" cx="406" cy="156" r="1.5"/><circle class="dot-0" cx="470" cy="156" r="1.5"/>
+<text x="548" y="160.5" class="m" text-anchor="middle">1</text>
+<text x="604" y="160.5" class="m t2" text-anchor="middle">0</text>
+<text x="640" y="160.5" class="s t2">Δ = 0，不入选</text>
+<path class="hair" d="M0 176 H720"/>
+<text x="0" y="200" class="s t2">被覆盖于</text>
+<text x="150" y="200" class="s ca" text-anchor="middle">第 1 轮</text>
+<text x="214" y="200" class="s ca" text-anchor="middle">第 1 轮</text>
+<text x="278" y="200" class="s ca" text-anchor="middle">第 1 轮</text>
+<text x="342" y="200" class="s cb" text-anchor="middle">第 2 轮</text>
+<text x="406" y="200" class="s cb" text-anchor="middle">第 2 轮</text>
+<text x="470" y="200" class="s ca" text-anchor="middle">第 1 轮</text>
+<text x="548" y="200" class="m ca" text-anchor="middle">4/6</text>
+<text x="604" y="200" class="m cb" text-anchor="middle">6/6</text>
+<text x="640" y="200" class="s ct">全部覆盖</text>
+<path class="hair" d="M0 216 H720"/>
+<text x="0" y="242">剩余未覆盖：第 1 轮后 {n₄, n₅}，第 2 轮后为空 → 停止（上限 L = 3，只用了 2 条）</text>
+</svg>
+</div>
+<figcaption><b>图 5</b>贪心集合覆盖，接图 4。每轮选「能新覆盖最多候选节点」的超边，Δ 就是新增的覆盖数。第 1 轮 001 一次盖住 4 个；第 2 轮 005 的 n₂ 已被盖过，只算新增的 2 个。008 玉米虽然也含 12℃，但第 2 轮 Δ = 0，不会进入上下文。最后交给 LLM 的，正是第 4 节 Context 里的那两行。</figcaption>
+</figure>
 
 **这个优化过程在普通服务器上耗时不足 5 毫秒。** 它用极度紧凑的代数逻辑，替代了图数据库动辄几百毫秒的深层递归遍历。
 
@@ -467,6 +505,32 @@ Answer:
 论文在第 6.3 节设计了一个硬核测试：让大模型根据农田面积、农药推荐用量以及单位排放系数，计算**农业碳排放总量**。这是一个典型的多步数学逻辑推导。
 
 传统 RAG 和 GraphRAG 在这里大溃败，因为原始段落和社区综述里的数字被各种形容词包围，单位各异，大模型在提取数字代入公式时频频看错。而在 OG-RAG 里，离散数值作为结构化字段直接递到了大模型嘴边，大模型的符号推理准确度直接飙升了 **27%**。
+
+<figure class="fig" data-no-focus>
+<div class="fig-scroll">
+<svg viewBox="0 0 720 230" role="img" aria-label="对比：数字埋在叙述里时，模型取错面积、没换算单位，算出 45,600；数字作为带单位的字段交付时，直接算出 864 kgCO₂e">
+<defs><marker id="f6-ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="ah" d="M1 1.5 L8 5 L1 8.5"/></marker></defs>
+<text x="0" y="14" class="s t2">切块 / 社区摘要给的上下文</text>
+<path class="ln sr" d="M0.5 28 V96"/>
+<text x="16" y="52" class="t2">该地块去年扩种后约<tspan class="t0">一百二十</tspan>公顷（前年 <tspan class="t0">95</tspan> 公顷），</text>
+<text x="16" y="80" class="t2">除草剂按每亩 <tspan class="t0">100</tspan> 克上下施用，排放系数约 <tspan class="t0">4.8</tspan>。</text>
+<path class="ln" d="M356 62 H414" marker-end="url(#f6-ar)"/>
+<text x="436" y="46" class="m l t0">95 × 100 × 4.8</text>
+<text x="436" y="70" class="m l cr">= 45,600 ✕</text>
+<text x="436" y="92" class="s t2">面积取成了前年的，亩也没换算成公顷</text>
+<text x="0" y="134" class="s t2">OG-RAG 给的上下文：三条超边里的字段</text>
+<path class="ln st" d="M0.5 148 V216"/>
+<text x="16" y="168">种植面积</text><text x="112" y="168" class="m t0">120 ha</text>
+<text x="16" y="190">除草剂用量</text><text x="112" y="190" class="m t0">1.5 kg/ha</text>
+<text x="16" y="212">排放系数</text><text x="112" y="212" class="m t0">4.8 kgCO₂e/kg</text>
+<path class="ln" d="M356 182 H414" marker-end="url(#f6-ar)"/>
+<text x="436" y="166" class="m l t0">120 × 1.5 × 4.8</text>
+<text x="436" y="190" class="m l ct">= 864 kgCO₂e ✓</text>
+<text x="436" y="212" class="s t2">每个数都能指回一个字段，代入不用猜</text>
+</svg>
+</div>
+<figcaption><b>图 6</b>多步推导为什么受益于结构化字段（数值为示意）。上方的上下文里，数字和单位混在叙述中：面积有两个，用量按亩计，模型很容易代错；下方每个数都是带单位的独立字段，直接对上公式里的槽位，人工复核时也能逐项溯源。</figcaption>
+</figure>
 
 同时，在面向人类专家的双盲评测中，因为每一条依据都是一目了然的键值对，**人类审核员进行事实溯源与结论签批的时间缩短了整整 28.8%**。
 
