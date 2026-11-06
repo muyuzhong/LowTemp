@@ -3,18 +3,20 @@ id: LTN-025
 title: 上下文换窗：工作记忆与持久层的解耦
 subtitle: 从 Codex 的 new_context 到长程 Agent 的控制流重构
 category: research
-status: exploring
+status: tested
+temperature: 7.4
 confidence: 高
 scope: 上下文工程
 tags: [context, agent, codex, engineering, llm]
 published: 2026-09-04
-updated: 2026-09-04
+updated: 2026-10-18
 excerpt: 当上下文被稀释到临界点，传统的压缩摘要试图把历史压成浓缩液，却常把噪声和推断固化成事实。换窗（Rollover）提供了一条相反的路径：重置活动窗口，只留证据分级的交接备忘录，把全量历史退回持久取证层。
 minutes: 22
 featured: true
 tempLog:
   - { date: 2026-09-04, status: draft }
   - { date: 2026-09-04, status: exploring }
+  - { date: 2026-10-18, status: tested }
 notes:
   - { anchor: "误判固化", text: "换窗机制本身没有丢信息，它忠实地把错误推断也继承下来了——这直接催生了四分栏证据分级。" }
   - { anchor: "锚点设计", text: "不需要在架构里新造 window_id，canonical session_id + message_uuid 就是天然的时空坐标。" }

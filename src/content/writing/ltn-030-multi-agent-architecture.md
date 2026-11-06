@@ -3,7 +3,8 @@ id: LTN-030
 title: 解构 Multi-Agent：从九大拓扑、单主循环收敛到 Super-Agent 的工程祛魅
 subtitle: 为什么盲目拆分的多智能体常跑不过单循环？兼析 DeepSeek Super-Agent 的五层架构与三大前沿破局方案
 category: research
-status: exploring
+status: tested
+temperature: 9.5
 confidence: 高
 scope: Agent 架构 / 上下文工程
 tags: [multi-agent, context, architecture, super-agent]
@@ -13,7 +14,8 @@ excerpt: 过去两年，工业界对 Multi-Agent 经历了从狂热堆砌到理�
 minutes: 38
 featured: true
 tempLog:
-  - { date: 2026-11-06, status: exploring }
+  - { date: 2026-10-28, status: exploring }
+  - { date: 2026-11-06, status: tested }
 notes:
   - { anchor: "上下文防火墙", text: "拆出子 Agent 的唯一硬核理由是保护主循环的上下文浓度，而不是扮演拟人化的部门岗位。" }
   - { anchor: "数据处理不等式", text: "只要存在自然语言居中转述，信息就只会单调衰减。二传手越多，离代码现场的真实约束越远。" }

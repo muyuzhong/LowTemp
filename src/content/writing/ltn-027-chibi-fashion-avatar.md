@@ -3,7 +3,8 @@ id: LTN-027
 title: 一个想法：Q 版穿搭小人与原型踩坑记录
 subtitle: 关于数据捏人、淘宝衣服搭配，以及 Opus 5.5 与 3D 管线碰壁的阶段性记录
 category: engineering
-status: exploring
+status: draft
+temperature: 17.8
 confidence: 中
 scope: 产品设想 / 原型实验
 tags: [avatar, fashion, prototype, llm, idea]
@@ -12,7 +13,7 @@ excerpt: 记录一个关于 Q 版穿搭小人的产品构想：根据真实身�
 minutes: 8
 featured: false
 tempLog:
-  - { date: 2026-10-02, status: exploring }
+  - { date: 2026-10-02, status: draft }
 notes:
   - { anchor: "Opus 5.5", text: "试着用它做了原型，但当前模型对这种可交互的图形系统，处理能力依然不够好。" }
   - { anchor: "Blender", text: "如果引入传统 3D 软件，不仅难以实现用户端自由自定义，还极易做成游戏那种厚重的真实建模。" }

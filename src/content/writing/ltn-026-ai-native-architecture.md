@@ -4,6 +4,7 @@ title: 驯服概率：AI 原生应用的工程重构与注意力账本
 subtitle: 从聊天框迷思到语义算子，重构确定性软件体系
 category: engineering
 status: stable
+temperature: 4.8
 confidence: 高
 scope: 系统架构
 tags: [ai-native, architecture, system-design, llm]

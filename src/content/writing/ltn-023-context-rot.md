@@ -4,6 +4,7 @@ title: 我如何理解 Context Rot
 subtitle: 上下文不是被用完的,是被稀释的
 category: research
 status: exploring
+temperature: 15.2
 confidence: 中
 scope: 上下文工程
 tags: [context, agent, llm]

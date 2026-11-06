@@ -17,18 +17,41 @@ const pos = (t: number) => ((MAX - t) / span) * 100;
 const majors = [20, 16, 12, 8, 4];
 const halfDegrees = Math.round(span * 2);
 
-/* 同温度的杆向上错开 */
-const stack = new Map<number, number>();
-const pins = entries
+/* 同温或邻近温度的杆向上错开，避免标签互相重叠或立杆穿字 */
+const LABEL_SPAN = 10.2; // 单个标签在色带上的近似占宽百分比
+const rawPins = entries
   .map((e) => ({ e, t: tempOf(e.data.status, e.data.temperature) }))
   .filter((x): x is { e: CollectionEntry<'writing'>; t: number } => x.t != null)
   .sort((a, b) => a.e.data.published.getTime() - b.e.data.published.getTime())
   .map(({ e, t }) => {
-    const n = stack.get(t) ?? 0;
-    stack.set(t, n + 1);
     const x = pos(t);
-    return { e, t, n, x, flip: x > 82 };
+    const flip = x > 82;
+    const left = flip ? x - LABEL_SPAN : x - 0.8;
+    const right = flip ? x + 0.8 : x + LABEL_SPAN;
+    return { e, t, x, flip, left, right, n: 0 };
   });
+
+/* 右向标签从右往左排、左向标签从左往右排，使跨过邻杆的标签自然高于邻杆顶点 */
+const order = [
+  ...rawPins.filter((p) => !p.flip).sort((a, b) => b.x - a.x || a.e.data.published.getTime() - b.e.data.published.getTime()),
+  ...rawPins.filter((p) => p.flip).sort((a, b) => a.x - b.x || a.e.data.published.getTime() - b.e.data.published.getTime()),
+];
+const placed: typeof rawPins = [];
+for (const p of order) {
+  let n = 0;
+  for (const q of placed) {
+    /* 若已放置同向邻杆 q 的立杆落在 p 的标签范围内，p 至少高于 q */
+    if (q.flip === p.flip && q.x > p.left && q.x < p.right) {
+      n = Math.max(n, q.n + 1);
+    }
+  }
+  while (placed.some((q) => q.n === n && Math.max(p.left, q.left) < Math.min(p.right, q.right))) {
+    n++;
+  }
+  p.n = n;
+  placed.push(p);
+}
+const pins = rawPins;
 const rows = Math.max(1, ...pins.map((p) => p.n + 1));
 ---
 <div

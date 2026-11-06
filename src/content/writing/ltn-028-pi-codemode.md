@@ -4,6 +4,7 @@ title: 聊聊 Pi 的 Codemode：为什么代码执行可能比工具调用更靠
 subtitle: 从“抵制 MCP”到端侧沙箱，长程 Agent 的上下文算术与工程思考
 category: research
 status: exploring
+temperature: 13.6
 confidence: 高
 scope: 上下文工程 / Agent 架构
 tags: [pi, codemode, mcp, context, architecture, quickjs]

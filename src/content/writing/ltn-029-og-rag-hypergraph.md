@@ -4,6 +4,7 @@ title: 拆解 OG-RAG：当领域本体遇上超图，一次看穿学术包装后
 subtitle: 从机械切块到反范式宽表，严肃垂直场景下的“零幻觉”检索究竟怎么做？
 category: research
 status: exploring
+temperature: 11.6
 confidence: 高
 scope: 检索架构 / 知识工程
 tags: [rag, ontology, hypergraph, og-rag, emnlp2025]

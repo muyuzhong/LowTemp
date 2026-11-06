@@ -3,7 +3,7 @@ id: LAB-003
 title: Conservative Coding Agent
 subtitle: 一个强调最小必要修改和变更安全验证的 Coding Agent。
 state: 已完成
-status: exploring
+status: tested
 problem: 现有 Coding Agent 能完成修改,但难以控制修改范围,也很难证明没有引入额外问题。改对一个函数的同时顺手"优化"另外三个,是常态而非事故。
 hypothesis: 如果 Agent 在修改前理解局部语义边界,并在修改后进行增量验证,可以显著降低非预期变更。
 system:
