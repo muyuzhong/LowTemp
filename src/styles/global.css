@@ -1473,42 +1473,54 @@ span.section-more { text-decoration: none; }
   color: var(--teal);
 }
 
-/* ---------- 入场(intro.ts;仅首页,每个会话一次) ---------- */
+/* ---------- 入场:一根弦(intro-string.ts / intro.ts;仅首页,每个会话一次) ---------- */
 .intro-gate { display: none; }
-html[data-intro="on"] { overflow: hidden; }
+/* 锁住滚动,但保留滚动条的位置:进入前后版心不横移,弦才能和温度尺严丝合缝 */
+html[data-intro] { overflow: hidden; scrollbar-gutter: stable; }
 html[data-intro] .intro-gate {
   display: block;
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: var(--bg-0);
+  background-color: var(--bg-0);
   cursor: pointer;
   user-select: none;
+  touch-action: none;
   -webkit-tap-highlight-color: transparent;
 }
-/* 揭开时背景交给画布:水波扫过处被擦掉,露出下面的首页 */
-html[data-intro="leaving"] .intro-gate { background: transparent; cursor: default; }
-.intro-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; opacity: 0; transition: opacity 1400ms var(--ease); }
-.intro-hud {
+/* 进入:底色退去,弦落到温度尺上,首页顺着它浮现(编排在 intro.ts) */
+html[data-intro="leaving"] .intro-gate {
+  background-color: transparent;
+  cursor: default;
+  transition: background-color 460ms var(--ease) 180ms;
+}
+.intro-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+/* 弦线在视口正中:标题在它上方,标语与提示在它下方,给刻度浮起和拨弦留出余地 */
+.intro-title, .intro-foot {
   position: absolute;
-  bottom: max(9vh, 48px);
   left: 16px;
   right: 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+  margin: 0;
   text-align: center;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 1400ms var(--ease) 500ms;
+  transition: opacity 1200ms var(--ease) 700ms;
 }
-.intro-gate.is-ready .intro-canvas, .intro-gate.is-ready .intro-hud { opacity: 1; }
 /* 字距撑开后用 padding-left 补回,视觉上仍居中 */
-.intro-title { font-family: var(--font-serif); font-size: 19px; font-weight: 600; letter-spacing: 0.5em; padding-left: 0.5em; color: var(--ink-0); }
+.intro-title {
+  bottom: calc(50% + 76px);
+  padding-left: 0.5em;
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.5em;
+  color: var(--ink-0);
+}
+.intro-foot { top: calc(50% + 62px); display: flex; flex-direction: column; align-items: center; }
 .intro-tagline { font-family: var(--font-serif); font-size: 14px; letter-spacing: 0.08em; color: var(--ink-1); }
 .intro-enter {
-  margin-top: 18px;
+  margin-top: 26px;
   padding: 4px 8px 4px calc(8px + 0.3em);
   border: 0;
   background: none;
@@ -1516,14 +1528,12 @@ html[data-intro="leaving"] .intro-gate { background: transparent; cursor: defaul
   letter-spacing: 0.3em;
   cursor: pointer;
   pointer-events: auto;
-  animation: intro-breathe 3.6s ease-in-out infinite;
+  animation: intro-breathe 4s ease-in-out infinite;
 }
-.intro-enter:hover { color: var(--ink-0); }
-@keyframes intro-breathe { 50% { opacity: 0.35; } }
-.intro-gate.is-leaving .intro-hud { opacity: 0; transition: opacity 300ms var(--ease); }
-/* 首页像从水下浮上来:先略糊、略大,随水波扫过变清晰 */
-html[data-intro="leaving"] .frame { animation: intro-surface 1500ms var(--ease) both; }
-@keyframes intro-surface { from { filter: blur(3px); transform: scale(1.012); } }
+.intro-enter:hover { color: var(--ink-1); }
+@keyframes intro-breathe { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.2; } }
+.intro-gate.is-ready .intro-title, .intro-gate.is-ready .intro-foot { opacity: 1; }
+.intro-gate.is-leaving .intro-title, .intro-gate.is-leaving .intro-foot { opacity: 0; transition: opacity 200ms var(--ease); }
 
 /* ---------- 动效纪律 ---------- */
 @media (prefers-reduced-motion: reduce) {

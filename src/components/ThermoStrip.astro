@@ -2,7 +2,8 @@
 /* 温度尺 — 首页的签名图形。
    一根真正的温度尺:光谱色带(雾 → 结晶)+ 半度细刻度;每篇文章是一根立杆,
    杆顶的圆点颜色 = 物态,杆高只用于错开同温度的文章。越确定,越靠右(越冷)。
-   数据即图形,纯 HTML/CSS。hover 杆会弹出站内预览。 */
+   数据即图形,纯 HTML/CSS。hover 杆会弹出站内预览。
+   data-max / min / majors 供首页入场的弦对齐刻度(src/scripts/intro.ts)。 */
 import { tempOf, fmtTemp, STATUS_COLOR } from '../lib/temp';
 import type { CollectionEntry } from 'astro:content';
 
@@ -30,7 +31,15 @@ const pins = entries
   });
 const rows = Math.max(1, ...pins.map((p) => p.n + 1));
 ---
-<div class="thermo" style={`--rows: ${rows}; --halves: ${halfDegrees}`} role="group" aria-label="文章温度分布">
+<div
+  class="thermo"
+  style={`--rows: ${rows}; --halves: ${halfDegrees}`}
+  data-max={MAX}
+  data-min={MIN}
+  data-majors={majors.join(',')}
+  role="group"
+  aria-label="文章温度分布"
+>
   <div class="thermo-pins">
     {pins.map(({ e, t, n, x, flip }) => (
       <a

@@ -34,7 +34,7 @@ function grad(h: number, x: number, y: number, z: number) {
   const v = (h & 15) < 4 ? y : (h & 15) === 12 || (h & 15) === 14 ? x : z;
   return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
 }
-/* 首页入场的锦鲤池 koi-pond.ts 也用这份噪声 */
+/* 锦鲤池预览(/koi)的 koi-pond.ts 也用这份噪声 */
 export function noise(x: number, y: number, z: number) {
   const X = Math.floor(x) & 255, Y = Math.floor(y) & 255, Z = Math.floor(z) & 255;
   x -= Math.floor(x); y -= Math.floor(y); z -= Math.floor(z);
