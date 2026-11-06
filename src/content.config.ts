@@ -22,6 +22,15 @@ const writing = defineCollection({
     featured: z.boolean().default(false),
     tempLog: z.array(z.object({ date: z.coerce.date(), status: statusEnum })).optional(),
     notes: z.array(z.object({ anchor: z.string(), text: z.string() })).optional(),
+    parts: z
+      .array(
+        z.object({
+          title: z.string(),
+          subtitle: z.string().optional(),
+          minutes: z.number().optional(),
+        })
+      )
+      .optional(),
   }),
 });
 

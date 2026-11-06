@@ -166,7 +166,7 @@ function moveSelection(down: boolean) {
 
 /* ---------- 文章页 J / K 跳章节 ---------- */
 function jumpHeading(down: boolean) {
-  const hs = [...document.querySelectorAll<HTMLElement>('.prose h2')];
+  const hs = [...document.querySelectorAll<HTMLElement>('.prose h2')].filter((h) => h.offsetParent !== null);
   if (!hs.length) return false;
   const target = down
     ? hs.find((h) => h.getBoundingClientRect().top > 80) ?? hs[hs.length - 1]

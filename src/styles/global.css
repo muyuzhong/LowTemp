@@ -314,6 +314,7 @@ span.section-more { text-decoration: none; }
   color: var(--ink-1);
 }
 .rb-title .mono { margin-right: 8px; color: var(--ink-2); font-size: 12px; }
+.rb-title .rb-part { color: var(--accent); margin-right: 10px; }
 .rb-readout { font-family: var(--font-sans); font-size: 13px; letter-spacing: 0; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .rb-focus {
   display: inline-flex;
@@ -416,6 +417,224 @@ span.section-more { text-decoration: none; }
   }
   .outline a:hover { color: var(--ink-0); }
   .outline a.active { color: var(--ink-0); border-left-color: var(--accent); }
+  .outline-parts { margin-bottom: 24px; }
+  .outline-part-link .mono { margin-right: 6px; font-size: 11px; color: var(--ink-2); }
+  .outline-part-link.active .mono { color: var(--accent); }
+}
+
+/* ---------- 分篇独立阅读：顶部篇章栏 + 篇首导语 + 文末下一部分导航 ---------- */
+.part-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 24px;
+  margin: 0 0 36px;
+  border-bottom: 1px solid var(--line);
+  scroll-margin-top: 64px;
+}
+.part-tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 0 16px;
+  color: var(--ink-2);
+  transition: color 160ms;
+}
+.part-tab::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: transparent;
+  transition: background 180ms var(--ease);
+}
+.part-tab:hover { color: var(--ink-0); }
+.part-tab.active { color: var(--ink-0); }
+.part-tab.active::after { background: var(--accent); }
+.part-tab-kicker {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--ink-2);
+  transition: color 160ms;
+}
+.part-tab.active .part-tab-kicker { color: var(--accent); }
+.part-tab-title {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (max-width: 680px) {
+  .part-tabs {
+    grid-template-columns: 1fr;
+    gap: 0;
+    border-top: 1px solid var(--line-soft);
+  }
+  .part-tab {
+    padding: 12px 0 12px 14px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .part-tab:last-child { border-bottom: 0; }
+  .part-tab::after {
+    top: 10px;
+    bottom: 10px;
+    left: 0;
+    right: auto;
+    width: 2px;
+    height: auto;
+  }
+}
+
+.part-lead {
+  margin: 0 0 2.2em;
+  padding: 4px 0 22px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.part-lead-kicker {
+  margin-bottom: 8px;
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+.part-lead-title {
+  font-family: var(--font-serif);
+  font-size: clamp(22px, 4.2vw, 27px);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink-0);
+}
+.part-lead-sub {
+  margin: 8px 0 0 !important;
+  font-family: var(--font-serif);
+  font-size: 16.5px;
+  line-height: 1.75;
+  color: var(--ink-1);
+}
+
+.part-pager {
+  margin-top: 64px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.part-pager-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.part-pager-status {
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.part-pager-steps {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+.part-step-dot {
+  font-size: 11.5px;
+  color: var(--ink-2);
+  padding-bottom: 2px;
+  border-bottom: 1.5px solid transparent;
+  transition: color 160ms, border-color 160ms;
+}
+.part-step-dot:hover { color: var(--ink-0); }
+.part-step-dot.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 500;
+}
+.part-pager-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 28px;
+  align-items: start;
+}
+.part-pager-grid.only-next {
+  grid-template-columns: 1fr;
+}
+.part-pager-card {
+  display: block;
+  position: relative;
+  padding: 6px 0;
+  transition: color 160ms;
+}
+.part-pager-card.next {
+  text-align: right;
+  padding-right: 16px;
+  border-right: 2px solid var(--accent);
+}
+.part-pager-grid.only-next .part-pager-card.next {
+  text-align: left;
+  padding-right: 0;
+  padding-left: 18px;
+  border-right: 0;
+  border-left: 2px solid var(--accent);
+}
+.part-pager-card.prev {
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+}
+.part-pager-card.is-restart {
+  border-right-color: var(--teal);
+}
+.part-pager-dir {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11.5px;
+  color: var(--accent);
+}
+.part-pager-card.prev .part-pager-dir {
+  color: var(--ink-2);
+}
+.part-pager-card.is-restart .part-pager-dir {
+  color: var(--teal);
+}
+.part-pager-title {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink-0);
+  transition: color 160ms;
+}
+.part-pager-card.prev .part-pager-title {
+  font-size: 17.5px;
+  color: var(--ink-1);
+}
+.part-pager-card:hover .part-pager-title {
+  color: var(--accent);
+}
+.part-pager-sub {
+  display: block;
+  margin-top: 6px;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--ink-1);
+}
+@media (max-width: 680px) {
+  .part-pager-grid {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .part-pager-card.next {
+    text-align: left;
+    padding-right: 0;
+    padding-left: 16px;
+    border-right: 0;
+    border-left: 2px solid var(--accent);
+  }
 }
 
 /* ---------- 正文 ---------- */
@@ -1321,7 +1540,8 @@ html[data-intro="leaving"] .frame { animation: intro-surface 1500ms var(--ease) 
 @media print {
   *, *::before, *::after { background: transparent !important; box-shadow: none !important; }
   .site-header, .site-footer, .read-line, .reading-bar, .outline, .gauge, .toc, .focus-guide,
-  .quote-bubble, #bg-field, .intro-gate, .post-foot, .post-nav, .link-popover, .cmd-palette, .copy-btn, .frame::before, .frame::after { display: none !important; }
+  .quote-bubble, #bg-field, .intro-gate, .post-foot, .post-nav, .part-tabs, .part-pager, .link-popover, .cmd-palette, .copy-btn, .frame::before, .frame::after { display: none !important; }
+  .part-pane[hidden] { display: block !important; margin-top: 24pt; }
   body { color: #111 !important; font-size: 11pt; line-height: 1.7; }
   .frame { max-width: none; padding: 0; border: 0; }
   .post-head { padding: 0 0 16pt; }
