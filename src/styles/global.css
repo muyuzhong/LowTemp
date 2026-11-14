@@ -322,7 +322,7 @@ details.log-day[open][data-auto-summary="1"] .log-day-bar { justify-content: fle
 .log-day-span { color: var(--ink-2); font-size: 12px; white-space: nowrap; }
 
 .log-timeline { padding: 4px 0 10px 128px; }
-.log-moment {
+.log-timeline .log-moment {
   position: relative;
   display: grid;
   grid-template-columns: 46px 14px minmax(0, 1fr);
@@ -330,7 +330,7 @@ details.log-day[open][data-auto-summary="1"] .log-day-bar { justify-content: fle
   margin-top: var(--gap, 6px);
   scroll-margin-top: 84px;
 }
-.log-moment:first-child { margin-top: 0; }
+.log-timeline .log-moment:first-child { margin-top: 0; }
 .log-time { padding-top: 4px; font-size: 12px; line-height: 1.6; color: var(--ink-2); }
 .log-rail { position: relative; }
 .log-rail::before {
@@ -343,8 +343,8 @@ details.log-day[open][data-auto-summary="1"] .log-day-bar { justify-content: fle
   background: var(--line);
   transform: translateX(-0.5px);
 }
-.log-moment:last-child .log-rail::before { bottom: 6px; }
-.log-moment.is-long-gap .log-rail::after {
+.log-timeline .log-moment:last-child .log-rail::before { bottom: 6px; }
+.log-timeline .log-moment.is-long-gap .log-rail::after {
   content: "";
   position: absolute;
   left: 50%;
@@ -353,7 +353,7 @@ details.log-day[open][data-auto-summary="1"] .log-day-bar { justify-content: fle
   border-left: 1px dashed color-mix(in srgb, var(--ink-2) 55%, transparent);
   transform: translateX(-0.5px);
 }
-.log-moment.is-milestone .log-rail::after {
+.log-timeline .log-moment.is-milestone .log-rail::after {
   content: "";
   position: absolute;
   left: 50%;
@@ -365,8 +365,8 @@ details.log-day[open][data-auto-summary="1"] .log-day-bar { justify-content: fle
   transform: translateX(-50%);
 }
 .log-text { font-size: 15.5px; line-height: 1.8; color: var(--ink-1); min-width: 0; }
-.log-moment.is-milestone .log-text { color: var(--ink-0); }
-.log-single-body { font-size: 16px; line-height: 1.85; color: var(--ink-1); scroll-margin-top: 84px; }
+.log-timeline .log-moment.is-milestone .log-text { color: var(--ink-0); }
+.log-single-body { display: block; margin: 0; min-width: 0; font-size: 16px; line-height: 1.85; color: var(--ink-1); scroll-margin-top: 84px; }
 .log-kind { margin-right: 0.6em; font-size: 13px; color: var(--ink-2); }
 .log-kind::after { content: "·"; margin-left: 0.6em; opacity: 0.6; }
 
@@ -415,7 +415,7 @@ a.log-ref { font-family: var(--font-mono); font-size: 0.9em; letter-spacing: 0.0
   .log-day.is-single,
   .log-day-head { grid-template-columns: 1fr; gap: 2px; padding: 8px 0; }
   .log-timeline { padding: 4px 0 8px 0; }
-  .log-moment { grid-template-columns: 42px 12px minmax(0, 1fr); gap: 0 8px; }
+  .log-timeline .log-moment { grid-template-columns: 42px 12px minmax(0, 1fr); gap: 0 8px; }
   .log-mentions li { grid-template-columns: 1fr; gap: 2px; }
 }
 
