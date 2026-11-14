@@ -221,14 +221,203 @@ span.section-more { text-decoration: none; }
 .hypo p { font-size: 16px; line-height: 1.9; color: var(--ink-1); }
 .hypo-foot { margin-top: 8px; font-family: var(--font-sans); font-size: 13.5px; letter-spacing: 0; color: var(--ink-2); }
 
-/* 日志 */
-.log-entry { display: grid; grid-template-columns: 96px 1fr; gap: 20px; padding: 8px 0; scroll-margin-top: 80px; }
-.log-date { padding-top: 3px; font-family: var(--font-sans); font-size: 14px; letter-spacing: 0; color: var(--ink-2); }
-.log-entry p { font-size: 16px; line-height: 1.85; color: var(--ink-1); }
-.log-entry p a { color: var(--ink-0); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 55%, transparent); text-underline-offset: 4px; }
+/* 日志：24h 昼夜刻度弦、日内时间线、双层密度折叠 */
+.log-rhythm { max-width: 760px; margin-bottom: 44px; color: var(--ink-2); }
+.log-rhythm-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; margin-bottom: 10px; font-size: 13px; color: var(--ink-2); }
+#rhythm-readout { transition: color 160ms; }
+#rhythm-readout.is-live { color: var(--ink-0); }
+.log-rhythm-track { position: relative; }
+.log-rhythm-pins { position: relative; height: 22px; }
+.rhythm-pin {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: 10px;
+  background: color-mix(in srgb, var(--ink-2) 55%, transparent);
+  transform: translateX(-0.5px);
+  transition: height 160ms var(--ease), background-color 160ms;
+}
+.rhythm-pin::after { content: ""; position: absolute; inset: -6px -6px 0; }
+.rhythm-pin.milestone { height: 15px; background: var(--teal); }
+.rhythm-pin.milestone::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: -2.5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--teal);
+}
+.rhythm-pin:hover,
+.rhythm-pin:focus-visible { height: 20px; background: var(--accent); outline: none; }
+.rhythm-pin.milestone:hover,
+.rhythm-pin.milestone:focus-visible { background: var(--accent); }
+.rhythm-pin.milestone:hover::before,
+.rhythm-pin.milestone:focus-visible::before { background: var(--accent); }
+.log-rhythm-string { height: 1px; background: var(--line); }
+.log-rhythm-ticks {
+  position: relative;
+  height: 24px;
+  background: repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px calc(100% / 24));
+  background-size: 100% 4px;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+}
+.log-rhythm-ticks .major { position: absolute; top: 0; width: 1px; height: 9px; background: var(--ink-2); opacity: 0.65; }
+.log-rhythm-ticks .major b {
+  position: absolute;
+  top: 11px;
+  left: 0;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.log-rhythm-ticks .major:first-child b { transform: none; }
+.log-rhythm-ticks .major:last-child b { transform: translateX(-100%); }
+
+.log-filters { max-width: 760px; margin-bottom: 40px; }
+.log-fold-toggle { margin-left: auto; font-size: 13.5px; color: var(--ink-2); }
+
 .log-group { max-width: 760px; }
 .log-group + .log-group { margin-top: 48px; }
-@media (max-width: 640px) { .log-entry { grid-template-columns: 1fr; gap: 0; padding: 10px 0; } }
+
+.log-day { scroll-margin-top: 84px; }
+.log-day + .log-day { margin-top: 18px; }
+.log-day.is-single { display: grid; grid-template-columns: 108px minmax(0, 1fr); gap: 20px; padding: 6px 0; }
+
+.log-date {
+  padding-top: 3px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  letter-spacing: 0;
+  color: var(--ink-1);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.log-date em { margin-left: 0.35em; font-style: normal; font-size: 13px; color: var(--ink-2); }
+
+.log-day-head {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 20px;
+  padding: 6px 0;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.log-day-head::-webkit-details-marker { display: none; }
+.log-day-head:hover .log-date,
+.log-day-head:hover .log-day-summary { color: var(--ink-0); }
+
+.log-day-bar { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; min-width: 0; }
+.log-day-summary { font-size: 15.5px; line-height: 1.75; color: var(--ink-1); transition: color 160ms; }
+details.log-day[open] .log-day-summary { color: var(--ink-0); }
+details.log-day[open][data-auto-summary="1"] .log-day-summary { display: none; }
+details.log-day[open][data-auto-summary="1"] .log-day-bar { justify-content: flex-start; }
+.log-day-span { color: var(--ink-2); font-size: 12px; white-space: nowrap; }
+
+.log-timeline { padding: 4px 0 10px 128px; }
+.log-moment {
+  position: relative;
+  display: grid;
+  grid-template-columns: 46px 14px minmax(0, 1fr);
+  gap: 0 10px;
+  margin-top: var(--gap, 6px);
+  scroll-margin-top: 84px;
+}
+.log-moment:first-child { margin-top: 0; }
+.log-time { padding-top: 4px; font-size: 12px; line-height: 1.6; color: var(--ink-2); }
+.log-rail { position: relative; }
+.log-rail::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  bottom: calc(-1 * var(--gap, 6px) - 2px);
+  width: 1px;
+  background: var(--line);
+  transform: translateX(-0.5px);
+}
+.log-moment:last-child .log-rail::before { bottom: 6px; }
+.log-moment.is-long-gap .log-rail::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: calc(-1 * var(--gap, 14px) + 4px);
+  height: calc(var(--gap, 14px) - 6px);
+  border-left: 1px dashed color-mix(in srgb, var(--ink-2) 55%, transparent);
+  transform: translateX(-0.5px);
+}
+.log-moment.is-milestone .log-rail::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 11px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--teal);
+  transform: translateX(-50%);
+}
+.log-text { font-size: 15.5px; line-height: 1.8; color: var(--ink-1); min-width: 0; }
+.log-moment.is-milestone .log-text { color: var(--ink-0); }
+.log-single-body { font-size: 16px; line-height: 1.85; color: var(--ink-1); scroll-margin-top: 84px; }
+.log-kind { margin-right: 0.6em; font-size: 13px; color: var(--ink-2); }
+.log-kind::after { content: "·"; margin-left: 0.6em; opacity: 0.6; }
+
+.log-text a,
+.log-single-body a,
+.log-day-summary a {
+  color: var(--ink-0);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  text-underline-offset: 4px;
+}
+.log-text a:hover,
+.log-single-body a:hover,
+.log-day-summary a:hover { color: var(--accent); }
+a.log-ref { font-family: var(--font-mono); font-size: 0.9em; letter-spacing: 0.02em; }
+.log-text code,
+.log-single-body code,
+.log-day-summary code {
+  padding: 0.08em 0.35em;
+  border-radius: 3px;
+  background: var(--bg-1);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--ink-0);
+}
+
+.log-day.is-target,
+.log-moment.is-target {
+  box-shadow: -2px 0 0 var(--accent);
+  padding-left: 10px;
+  margin-left: -10px;
+}
+
+/* 文章页与项目页的反向日常轨迹 */
+.log-mentions { margin-top: 28px; font-size: 14px; color: var(--ink-2); }
+.log-mentions-head { margin-bottom: 8px; color: var(--ink-2); }
+.log-mentions ul { display: grid; gap: 6px; }
+.log-mentions li { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 12px; align-items: baseline; line-height: 1.7; }
+.log-mentions li > a.mono { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 4px; white-space: nowrap; }
+.log-mentions li > a.mono:hover { color: var(--accent); text-decoration-color: var(--accent); }
+.log-mentions-body { color: var(--ink-1); }
+.log-mentions-body a { color: var(--ink-0); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 50%, transparent); text-underline-offset: 3px; }
+.log-mentions-body code { padding: 0.05em 0.3em; border-radius: 3px; background: var(--bg-1); font-family: var(--font-mono); font-size: 0.86em; color: var(--ink-0); }
+
+@media (max-width: 640px) {
+  .log-day.is-single,
+  .log-day-head { grid-template-columns: 1fr; gap: 2px; padding: 8px 0; }
+  .log-timeline { padding: 4px 0 8px 0; }
+  .log-moment { grid-template-columns: 42px 12px minmax(0, 1fr); gap: 0 8px; }
+  .log-mentions li { grid-template-columns: 1fr; gap: 2px; }
+}
 
 .about-line { max-width: 560px; font-size: 16px; line-height: 1.95; color: var(--ink-1); }
 
@@ -925,7 +1114,7 @@ span.section-more { text-decoration: none; }
 .post-foot button:hover, .post-foot a:hover { color: var(--ink-0); }
 
 /* ---------- 项目档案 ---------- */
-.lab { max-width: 760px; padding: 8px 0 64px; }
+.lab { max-width: 760px; padding: 8px 0 64px; scroll-margin-top: 84px; }
 .lab + .lab { padding-top: 64px; border-top: 1px solid var(--line-soft); }
 .lab-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; margin-bottom: 14px; font-family: var(--font-sans); font-size: 14px; letter-spacing: 0; color: var(--ink-2); }
 .lab h2 { font-family: var(--font-serif); font-size: 28px; font-weight: 600; line-height: 1.4; }
@@ -1550,7 +1739,9 @@ html[data-intro="leaving"] .intro-gate {
 @media print {
   *, *::before, *::after { background: transparent !important; box-shadow: none !important; }
   .site-header, .site-footer, .read-line, .reading-bar, .outline, .gauge, .toc, .focus-guide,
-  .quote-bubble, #bg-field, .intro-gate, .post-foot, .post-nav, .part-tabs, .part-pager, .link-popover, .cmd-palette, .copy-btn, .frame::before, .frame::after { display: none !important; }
+  .quote-bubble, #bg-field, .intro-gate, .post-foot, .post-nav, .part-tabs, .part-pager, .link-popover, .cmd-palette, .copy-btn, .frame::before, .frame::after,
+  .log-rhythm, #log-filters { display: none !important; }
+  details.log-day > .log-timeline { display: block !important; }
   .part-pane[hidden] { display: block !important; margin-top: 24pt; }
   body { color: #111 !important; font-size: 11pt; line-height: 1.7; }
   .frame { max-width: none; padding: 0; border: 0; }

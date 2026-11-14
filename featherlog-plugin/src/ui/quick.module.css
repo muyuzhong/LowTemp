@@ -1,0 +1,156 @@
+/* The scroll's quick check-in sticky note; the shell's preview sets its width. */
+.note,
+.note * {
+  box-sizing: border-box;
+}
+
+.note {
+  padding: 20px 24px 18px 26px;
+  color: var(--fl-ink);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kicker {
+  font: 13.5px var(--fl-font-hand);
+  color: var(--fl-rubric);
+  letter-spacing: 0.25em;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeInput {
+  width: 50px;
+  padding: 1px 2px;
+  border: 0;
+  border-bottom: 1px dotted var(--fl-ink-ghost);
+  background: none;
+  text-align: center;
+  font: 13px var(--fl-font-hand);
+  color: var(--fl-ink-soft);
+  outline: none;
+}
+
+.timeInput::placeholder {
+  color: var(--fl-ink-ghost);
+}
+
+.star {
+  padding: 1px 7px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  font: 12.5px var(--fl-font-hand);
+  color: var(--fl-ink-faded);
+  cursor: pointer;
+}
+
+.starOn {
+  color: var(--fl-rubric);
+  background: var(--fl-rubric-wash);
+  box-shadow: inset 0 0 0 1px rgba(138, 43, 29, 0.42);
+}
+
+.facets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.facets button {
+  padding: 2px 7px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  font: 12.5px var(--fl-font-hand);
+  color: var(--fl-ink-faded);
+  cursor: pointer;
+}
+
+.facets .on {
+  color: var(--fl-rubric);
+  box-shadow: inset 0 0 0 1.1px rgba(138, 43, 29, 0.5);
+}
+
+.writing {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  resize: none;
+  font: 15.5px/2 var(--fl-font-hand);
+  color: var(--fl-ink);
+  background-color: transparent;
+  background-image: linear-gradient(
+    transparent calc(2em - 1.5px),
+    rgba(42, 28, 17, 0.14) calc(2em - 1.5px),
+    rgba(42, 28, 17, 0.14) 2em
+  );
+  background-size: 100% 2em;
+}
+
+.writing::placeholder {
+  color: var(--fl-ink-ghost);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.openBook {
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  font: 12.5px var(--fl-font-hand);
+  color: var(--fl-ink-soft);
+  cursor: pointer;
+  text-align: left;
+}
+
+.openBook:hover {
+  color: var(--fl-rubric);
+}
+
+.write {
+  flex: none;
+  padding: 3px 14px 4px;
+  border: 0;
+  border-radius: 40% 46% 42% 48% / 60% 52% 58% 50%;
+  background: none;
+  box-shadow: inset 0 0 0 1.4px rgba(138, 43, 29, 0.55);
+  font: 15px var(--fl-font-display);
+  letter-spacing: 0.2em;
+  color: var(--fl-rubric);
+  cursor: pointer;
+}
+
+.write:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.after {
+  margin: 8px 0 0;
+  font: 12.5px var(--fl-font-hand);
+  color: var(--fl-ink-faded);
+}
+
+.trouble {
+  color: var(--fl-rubric);
+}

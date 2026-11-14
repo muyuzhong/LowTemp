@@ -2,8 +2,12 @@
 import { getCollection, render } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import { fmtTemp, tempOf, STATUS_LABEL, STATUS_COLOR } from '../lib/temp';
+import { buildRefMap, findLogMentions, parseDailyLogs } from '../lib/log';
 
+const writing = await getCollection('writing');
 const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+const rawLogs = await getCollection('log');
+const dailyLogs = parseDailyLogs(rawLogs, buildRefMap(writing, projects));
 const rendered = await Promise.all(projects.map(async (p) => ({ p, ...(await render(p)) })));
 ---
 <Base title="项目" description="问题、假设、系统，以及失败过的部分。">
@@ -16,8 +20,9 @@ const rendered = await Promise.all(projects.map(async (p) => ({ p, ...(await ren
   {rendered.map(({ p, Content }) => {
     const d = p.data;
     const temp = tempOf(d.status, d.temperature);
+    const mentions = findLogMentions(dailyLogs, [d.id, p.id]);
     return (
-      <article class="lab">
+      <article class="lab" id={d.id.toLowerCase()}>
         <div class="lab-head">
           <span>
             {d.id} · <i class="temp-dot" style={`background: ${STATUS_COLOR[d.status]}`}></i>{STATUS_LABEL[d.status]} · {fmtTemp(temp)}
@@ -42,6 +47,20 @@ const rendered = await Promise.all(projects.map(async (p) => ({ p, ...(await ren
         <div class="prose lab-body">
           <Content />
         </div>
+
+        {mentions.length > 0 && (
+          <aside class="log-mentions" aria-label="日常轨迹提及">
+            <p class="log-mentions-head">日常轨迹 · 提及 {mentions.length} 次</p>
+            <ul>
+              {mentions.slice(0, 6).map((m) => (
+                <li>
+                  <a href={m.href} class="mono">{m.dateDot}{m.time ? ` ${m.time}` : ''}</a>
+                  <span class="log-mentions-body" set:html={m.html} />
+                </li>
+              ))}
+            </ul>
+          </aside>
+        )}
       </article>
     );
   })}

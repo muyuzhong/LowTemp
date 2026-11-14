@@ -1,42 +1,336 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
-import { fmtDate } from '../lib/temp';
+import { buildRefMap, buildRhythmStats, parseDailyLogs, type DailyLog } from '../lib/log';
 
-const logs = (await getCollection('log')).sort(
-  (a, b) => b.data.published.getTime() - a.data.published.getTime()
-);
+const writing = await getCollection('writing');
+const projects = await getCollection('projects');
+const rawLogs = await getCollection('log');
+
+const refMap = buildRefMap(writing, projects);
+const days = parseDailyLogs(rawLogs, refMap);
+const rhythm = buildRhythmStats(days);
+
+const totalMoments = days.reduce((acc, d) => acc + d.moments.length, 0);
+const newestMs = days[0]?.dateMs ?? 0;
+const openCutoff = newestMs - 7 * 86_400_000;
+
+/* 全站日志存在的切面分类 */
+const allKinds = [...new Set(days.flatMap((d) => d.kinds))];
 
 /* 按月分组 */
-const groups = new Map<string, typeof logs>();
-for (const l of logs) {
-  const d = l.data.published;
-  const key = `${d.getUTCFullYear()}.${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-  if (!groups.has(key)) groups.set(key, []);
-  groups.get(key)!.push(l);
+const groups = new Map<string, (DailyLog & { defaultOpen: boolean })[]>();
+for (const d of days) {
+  if (!groups.has(d.monthKey)) groups.set(d.monthKey, []);
+  groups.get(d.monthKey)!.push({
+    ...d,
+    defaultOpen: d.dateMs >= openCutoff,
+  });
 }
+
+const rhythmHours = [0, 6, 12, 18, 24];
 ---
-<Base title="日志" description="短记录、进展与未经整理的想法。这里允许未完成。">
+<Base title="日志" description="每日轨迹、实验进展与未定型的生活切面。近况摊开，往日凝结。">
   <header class="page-head">
-    <div class="page-kicker"><span>实验室日志</span><span>共 {logs.length} 条</span></div>
+    <div class="page-kicker"><span>实验室日志</span><span>共 {days.length} 日 · {totalMoments} 刻</span></div>
     <h1>日志</h1>
-    <p class="page-sub">短记录、进展与未经整理的想法。这里允许未完成。</p>
+    <p class="page-sub">每日轨迹、实验进展与未定型的生活切面。近况摊开，往日凝结。</p>
   </header>
 
-  {[...groups.entries()].map(([month, items]) => (
-    <section class="log-group">
-      <h2 class="block-title">{month}</h2>
-      <div class="log">
-        {items.map((l) => (
-          <div class="log-entry" id={`log-${l.id}`}>
-            <time class="log-date">{fmtDate(l.data.published)}</time>
-            <p>
-              {l.body}
-              {l.data.link && <> — <a href={l.data.link}>链接</a></>}
-            </p>
-          </div>
-        ))}
+  {rhythm.needles.length > 0 && (
+    <section class="log-rhythm" aria-label="24 小时记录节律">
+      <div class="log-rhythm-head">
+        <span>{rhythm.scopeLabel}</span>
+        <span id="rhythm-readout" class="mono" data-default={rhythm.defaultReadout}>{rhythm.defaultReadout}</span>
+      </div>
+      <div class="log-rhythm-track">
+        <div class="log-rhythm-pins">
+          {rhythm.needles.map((n) => (
+            <a
+              class:list={['rhythm-pin', { milestone: n.milestone }]}
+              href={n.href}
+              style={`left: ${n.xPct.toFixed(2)}%`}
+              data-readout={n.readout}
+              aria-label={n.readout}
+            />
+          ))}
+        </div>
+        <div class="log-rhythm-string" aria-hidden="true"></div>
+        <div class="log-rhythm-ticks" aria-hidden="true">
+          {rhythmHours.map((h) => (
+            <span class="major" style={`left: ${(h / 24) * 100}%`}>
+              <b>{String(h).padStart(2, '0')}:00</b>
+            </span>
+          ))}
+        </div>
       </div>
     </section>
-  ))}
+  )}
+
+  <div class="filters log-filters" id="log-filters">
+    <div class="filter-line" data-group="mode" role="group" aria-label="按记录密度过滤">
+      <span class="filter-label">视图</span>
+      <button type="button" class="chip active" data-value="all">全部日常</button>
+      <button type="button" class="chip" data-value="milestone">
+        <i class="temp-dot" style="background: var(--teal)"></i>仅看节点
+      </button>
+      <button type="button" class="chip log-fold-toggle" id="log-fold-toggle" data-fold-action="toggle">
+        展开全部
+      </button>
+    </div>
+    {allKinds.length > 0 && (
+      <div class="filter-line" data-group="kind" role="group" aria-label="按内容切面过滤">
+        <span class="filter-label">切面</span>
+        <button type="button" class="chip active" data-value="all">全部</button>
+        {allKinds.map((k) => <button type="button" class="chip" data-value={k}>{k}</button>)}
+      </div>
+    )}
+  </div>
+
+  <div id="log-archive">
+    {[...groups.entries()].map(([month, items]) => (
+      <section class="log-group" data-month={month}>
+        <h2 class="block-title">{month}</h2>
+        <div class="log">
+          {items.map((day) =>
+            day.isSinglePlain ? (
+              <div
+                class="log-day is-single"
+                id={day.dayAnchorId}
+                data-has-milestone="1"
+              >
+                <time class="log-date" datetime={day.dateKey} title={day.dateDot}>
+                  {day.shortDate} <em>{day.weekday}</em>
+                </time>
+                <p
+                  class="log-single-body log-moment"
+                  id={day.moments[0].anchorId}
+                  data-milestone="1"
+                  data-kind=""
+                  set:html={day.moments[0].html}
+                />
+              </div>
+            ) : (
+              <details
+                class="log-day"
+                id={day.dayAnchorId}
+                open={day.defaultOpen}
+                data-default-open={day.defaultOpen ? '1' : '0'}
+                data-auto-summary={day.hasExplicitSummary ? '0' : '1'}
+                data-has-milestone={day.hasMilestone ? '1' : '0'}
+              >
+                <summary class="log-day-head">
+                  <time class="log-date" datetime={day.dateKey} title={day.dateDot}>
+                    {day.shortDate} <em>{day.weekday}</em>
+                  </time>
+                  <div class="log-day-bar">
+                    <span class="log-day-summary" set:html={day.previewHtml} />
+                    {day.spanLabel && <span class="log-day-span mono">{day.spanLabel}</span>}
+                  </div>
+                </summary>
+                <ol class="log-timeline">
+                  {day.moments.map((m) => (
+                    <li
+                      class:list={['log-moment', { 'is-milestone': m.milestone, 'is-long-gap': m.longGap }]}
+                      id={m.anchorId}
+                      style={`--gap: ${m.gapPx}px`}
+                      data-milestone={m.milestone ? '1' : '0'}
+                      data-kind={m.kind ?? ''}
+                    >
+                      <span class="log-time mono">{m.time ?? '——'}</span>
+                      <span class="log-rail" aria-hidden="true"></span>
+                      <div class="log-text">
+                        {m.kind && <span class="log-kind">{m.kind}</span>}
+                        <span set:html={m.html} />
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            )
+          )}
+        </div>
+      </section>
+    ))}
+  </div>
+
+  <p id="log-empty" class="empty" hidden>所选视图与切面的交集下暂无记录。</p>
+
+  <script>
+    let logAc: AbortController | undefined;
+
+    function initLogPage() {
+      logAc?.abort();
+      const archive = document.getElementById('log-archive');
+      if (!archive) return;
+
+      logAc = new AbortController();
+      const { signal } = logAc;
+
+      /* 1. 24h 刻度弦读数交互 */
+      const readout = document.getElementById('rhythm-readout');
+      const defaultReadout = readout?.dataset.default || '';
+      const pins = [...document.querySelectorAll<HTMLAnchorElement>('.rhythm-pin')];
+      const resetReadout = () => {
+        if (!readout) return;
+        readout.textContent = defaultReadout;
+        readout.classList.remove('is-live');
+      };
+      for (const pin of pins) {
+        const show = () => {
+          if (!readout) return;
+          readout.textContent = pin.dataset.readout || defaultReadout;
+          readout.classList.add('is-live');
+        };
+        pin.addEventListener('mouseenter', show, { signal });
+        pin.addEventListener('focus', show, { signal });
+        pin.addEventListener('mouseleave', resetReadout, { signal });
+        pin.addEventListener('blur', resetReadout, { signal });
+        pin.addEventListener('click', (e) => {
+          const href = pin.getAttribute('href');
+          if (href && href.startsWith('#')) {
+            e.preventDefault();
+            history.pushState(null, '', href);
+            revealHashTarget(href);
+          }
+        }, { signal });
+      }
+
+      /* 2. 折叠全部 / 恢复默认 */
+      const foldBtn = document.getElementById('log-fold-toggle') as HTMLButtonElement | null;
+      const detailsDays = [...archive.querySelectorAll<HTMLDetailsElement>('details.log-day')];
+      const syncFoldBtn = () => {
+        if (!foldBtn) return;
+        const visibleDetails = detailsDays.filter((d) => !d.hidden);
+        if (visibleDetails.length === 0) {
+          foldBtn.hidden = true;
+          return;
+        }
+        foldBtn.hidden = false;
+        const allOpen = visibleDetails.every((d) => d.open);
+        foldBtn.textContent = allOpen ? '收起全部' : '展开全部';
+      };
+
+      foldBtn?.addEventListener('click', () => {
+        const visibleDetails = detailsDays.filter((d) => !d.hidden);
+        const allOpen = visibleDetails.every((d) => d.open);
+        visibleDetails.forEach((d) => {
+          d.open = !allOpen;
+        });
+        syncFoldBtn();
+      }, { signal });
+
+      for (const d of detailsDays) {
+        d.addEventListener('toggle', syncFoldBtn, { signal });
+      }
+
+      /* 3. 视图 × 切面 双维过滤 */
+      const filtersRoot = document.getElementById('log-filters');
+      const emptyEl = document.getElementById('log-empty');
+      const dayEls = [...archive.querySelectorAll<HTMLElement>('.log-day')];
+      const groupEls = [...archive.querySelectorAll<HTMLElement>('.log-group')];
+      const active = { mode: 'all', kind: 'all' };
+
+      const applyFilters = () => {
+        const isFiltered = active.mode !== 'all' || active.kind !== 'all';
+        let visibleDays = 0;
+
+        for (const dayEl of dayEls) {
+          const moments = [...dayEl.querySelectorAll<HTMLElement>('.log-moment')];
+          let dayVisibleMoments = 0;
+
+          for (const m of moments) {
+            const matchMode = active.mode === 'all' || m.dataset.milestone === '1';
+            const matchKind = active.kind === 'all' || m.dataset.kind === active.kind;
+            const show = matchMode && matchKind;
+            if (!dayEl.classList.contains('is-single')) {
+              m.hidden = !show;
+            }
+            if (show) dayVisibleMoments++;
+          }
+
+          dayEl.hidden = dayVisibleMoments === 0;
+          if (!dayEl.hidden) {
+            visibleDays++;
+            if (dayEl instanceof HTMLDetailsElement) {
+              if (isFiltered) {
+                dayEl.open = true;
+              } else {
+                dayEl.open = dayEl.dataset.defaultOpen === '1';
+              }
+            }
+          }
+        }
+
+        for (const g of groupEls) {
+          const hasVisibleDay = [...g.querySelectorAll<HTMLElement>('.log-day')].some((d) => !d.hidden);
+          g.hidden = !hasVisibleDay;
+        }
+
+        if (emptyEl) emptyEl.hidden = visibleDays > 0;
+        syncFoldBtn();
+      };
+
+      const resetFilters = () => {
+        active.mode = 'all';
+        active.kind = 'all';
+        filtersRoot?.querySelectorAll<HTMLElement>('.filter-line').forEach((line) => {
+          line.querySelectorAll<HTMLButtonElement>('.chip').forEach((c) => {
+            c.classList.toggle('active', c.dataset.value === 'all');
+          });
+        });
+        applyFilters();
+      };
+
+      filtersRoot?.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.chip[data-value]');
+        const line = btn?.closest<HTMLElement>('.filter-line');
+        if (!btn || !line) return;
+        const group = line.dataset.group as 'mode' | 'kind' | undefined;
+        if (!group) return;
+        line.querySelectorAll('.chip[data-value]').forEach((c) => c.classList.toggle('active', c === btn));
+        active[group] = btn.dataset.value || 'all';
+        applyFilters();
+      }, { signal });
+
+      /* 4. 锚点定位：自动展开被折叠的日期并高亮目标 */
+      function revealHashTarget(rawHash?: string) {
+        const hash = rawHash ?? location.hash;
+        if (!hash || hash.length < 2) return;
+        let id = '';
+        try {
+          id = decodeURIComponent(hash.slice(1));
+        } catch {
+          id = hash.slice(1);
+        }
+        const target = document.getElementById(id);
+        if (!target || !archive?.contains(target)) return;
+
+        if (target.hidden || target.closest('[hidden]')) {
+          resetFilters();
+        }
+        const hostDetails = target.closest<HTMLDetailsElement>('details.log-day');
+        if (hostDetails && !hostDetails.open) {
+          hostDetails.open = true;
+          syncFoldBtn();
+        }
+
+        archive.querySelectorAll('.is-target').forEach((el) => el.classList.remove('is-target'));
+        target.classList.add('is-target');
+        requestAnimationFrame(() => {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+      }
+
+      syncFoldBtn();
+      if (location.hash) {
+        revealHashTarget(location.hash);
+      }
+      window.addEventListener('hashchange', () => revealHashTarget(location.hash), { signal });
+    }
+
+    initLogPage();
+    document.addEventListener('astro:page-load', initLogPage);
+    document.addEventListener('astro:before-swap', () => logAc?.abort());
+  </script>
 </Base>

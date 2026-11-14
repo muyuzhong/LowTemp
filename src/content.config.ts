@@ -3,34 +3,61 @@ import { glob } from 'astro/loaders';
 
 const statusEnum = z.enum(['draft', 'exploring', 'tested', 'stable', 'deprecated']);
 
+/* 兼容 Obsidian Properties 清空字段时产生的 YAML null 或空串 */
+const optStr = z
+  .string()
+  .nullable()
+  .optional()
+  .transform((v) => (v == null || v.trim() === '' ? undefined : v));
+
+const optNum = z
+  .number()
+  .nullable()
+  .optional()
+  .transform((v) => v ?? undefined);
+
+const optDate = z.coerce
+  .date()
+  .nullable()
+  .optional()
+  .transform((v) => v ?? undefined);
+
+const strList = z
+  .array(z.string())
+  .nullable()
+  .optional()
+  .transform((v) => v ?? []);
+
 const writing = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/writing' }),
   schema: z.object({
     id: z.string(), // LTN-xxx
     title: z.string(),
-    subtitle: z.string().optional(),
+    subtitle: optStr,
     category: z.enum(['engineering', 'research', 'buildlog', 'reflection']),
     status: statusEnum,
-    temperature: z.number().optional(),
-    confidence: z.string().optional(),
-    scope: z.string().optional(),
-    tags: z.array(z.string()).default([]),
+    temperature: optNum,
+    confidence: optStr,
+    scope: optStr,
+    tags: strList,
     published: z.coerce.date(),
-    updated: z.coerce.date().optional(),
+    updated: optDate,
     excerpt: z.string(),
-    minutes: z.number().optional(),
+    minutes: optNum,
     featured: z.boolean().default(false),
-    tempLog: z.array(z.object({ date: z.coerce.date(), status: statusEnum })).optional(),
-    notes: z.array(z.object({ anchor: z.string(), text: z.string() })).optional(),
+    tempLog: z.array(z.object({ date: z.coerce.date(), status: statusEnum })).nullable().optional().transform((v) => v ?? undefined),
+    notes: z.array(z.object({ anchor: z.string(), text: z.string() })).nullable().optional().transform((v) => v ?? undefined),
     parts: z
       .array(
         z.object({
           title: z.string(),
-          subtitle: z.string().optional(),
-          minutes: z.number().optional(),
+          subtitle: optStr,
+          minutes: optNum,
         })
       )
-      .optional(),
+      .nullable()
+      .optional()
+      .transform((v) => v ?? undefined),
   }),
 });
 
@@ -42,11 +69,11 @@ const projects = defineCollection({
     subtitle: z.string(),
     state: z.string(), // Active Development 等
     status: statusEnum,
-    temperature: z.number().optional(),
+    temperature: optNum,
     problem: z.string(),
     hypothesis: z.string(),
-    system: z.array(z.string()).default([]),
-    next: z.string().optional(),
+    system: strList,
+    next: optStr,
     order: z.number().default(0),
   }),
 });
@@ -55,7 +82,9 @@ const log = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/log' }),
   schema: z.object({
     published: z.coerce.date(),
-    link: z.string().optional(),
+    summary: optStr,
+    link: optStr,
+    tags: strList,
   }),
 });
 

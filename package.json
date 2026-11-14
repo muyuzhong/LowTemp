@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "log": "node scripts/log.mjs",
+    "build:plugin": "npm --prefix featherlog-plugin run build",
+    "install:plugin": "npm --prefix featherlog-plugin run build:plugin"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",

@@ -62,15 +62,16 @@ function setupLinkPopover() {
     }
     if (url.origin !== location.origin) return;
     const path = url.pathname.endsWith('/') ? url.pathname : url.pathname + '/';
-    const post = previews[path];
-    if (!post || path === location.pathname) return;
+    const key = url.hash ? `${path}${url.hash}` : path;
+    const post = previews[key] ?? (!url.hash ? previews[path] : undefined);
+    if (!post || (path === location.pathname && !url.hash)) return;
 
     clearTimeout(timer);
     timer = window.setTimeout(() => {
       $('popover-id')!.textContent = post.id;
       $('popover-status-text')!.textContent = `${post.statusLabel} · ${post.tempStr}`;
       $('popover-dot')!.style.backgroundColor = post.statusColor;
-      $('popover-time')!.textContent = `${post.minutes} 分钟`;
+      $('popover-time')!.textContent = post.metaRight ?? `${post.minutes} 分钟`;
       $('popover-title')!.textContent = post.title;
       $('popover-excerpt')!.textContent = post.excerpt;
 

@@ -4,6 +4,7 @@ import Base from '../../layouts/Base.astro';
 import {
   fmtDate, fmtTemp, tempOf, STATUS_LABEL, STATUS_COLOR, CATEGORY_LABEL,
 } from '../../lib/temp';
+import { buildRefMap, findLogMentions, parseDailyLogs } from '../../lib/log';
 
 export async function getStaticPaths() {
   const entries = await getCollection('writing');
@@ -33,7 +34,11 @@ const readMinutes = d.minutes ?? (entry.body ? calcReadingMinutes(entry.body) : 
 
 /* 思想脉络与双向反向链接 */
 const allWriting = await getCollection('writing');
+const allProjects = await getCollection('projects');
 const allLog = await getCollection('log');
+const refMap = buildRefMap(allWriting, allProjects);
+const dailyLogs = parseDailyLogs(allLog, refMap);
+const logMentions = findLogMentions(dailyLogs, [d.id, entry.id]);
 
 const outgoingNotes = allWriting.filter(
   (o) => o.id !== entry.id && (entry.body?.includes(o.data.id) || entry.body?.includes(o.id))
@@ -41,7 +46,6 @@ const outgoingNotes = allWriting.filter(
 const backlinkNotes = allWriting.filter(
   (o) => o.id !== entry.id && (o.body?.includes(d.id) || o.body?.includes(entry.id))
 );
-const backlinkLogs = allLog.filter((l) => l.body?.includes(d.id) || l.body?.includes(entry.id));
 const relatedNotes = allWriting
   .filter(
     (o) =>
@@ -53,7 +57,6 @@ const relatedNotes = allWriting
   .slice(0, 2);
 const connected = [
   ...backlinkNotes.map((n) => ({ tag: '← 引用了本文', href: `/writing/${n.id}/`, id: n.data.id, title: n.data.title })),
-  ...backlinkLogs.map((l) => ({ tag: '← 日志', href: `/log/#log-${l.id}`, id: l.id, title: '实验日志记录' })),
   ...outgoingNotes.map((n) => ({ tag: '延伸 →', href: `/writing/${n.id}/`, id: n.data.id, title: n.data.title })),
   ...relatedNotes.map((n) => ({ tag: '同类 ~', href: `/writing/${n.id}/`, id: n.data.id, title: n.data.title })),
 ];
@@ -313,6 +316,20 @@ ${entry.body || ''}
       <p class="temp-log">
         温度史 — {d.tempLog.map((t) => `${fmtDate(t.date)} ${STATUS_LABEL[t.status]}`).join(' → ')}
       </p>
+    )}
+
+    {logMentions.length > 0 && (
+      <aside class="log-mentions" aria-label="日常轨迹提及">
+        <p class="log-mentions-head">日常轨迹 · 提及 {logMentions.length} 次</p>
+        <ul>
+          {logMentions.slice(0, 6).map((m) => (
+            <li>
+              <a href={m.href} class="mono">{m.dateDot}{m.time ? ` ${m.time}` : ''}</a>
+              <span class="log-mentions-body" set:html={m.html} />
+            </li>
+          ))}
+        </ul>
+      </aside>
     )}
 
     {connected.length > 0 && (

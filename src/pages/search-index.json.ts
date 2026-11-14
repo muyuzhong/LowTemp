@@ -1,10 +1,12 @@
 import { getCollection } from 'astro:content';
 import { fmtTemp, tempOf, STATUS_LABEL, CATEGORY_LABEL } from '../lib/temp';
+import { buildRefMap, parseDailyLogs } from '../lib/log';
 
 export async function GET() {
   const writing = await getCollection('writing');
   const projects = await getCollection('projects');
   const log = await getCollection('log');
+  const dailyLogs = parseDailyLogs(log, buildRefMap(writing, projects));
 
   const items = [
     ...writing.map((w) => {
@@ -33,30 +35,33 @@ export async function GET() {
         slug: p.id,
         title: p.data.title,
         subtitle: p.data.subtitle ?? '',
-        excerpt: p.data.excerpt,
+        excerpt: p.data.subtitle || p.data.problem,
         category: '项目',
         status: STATUS_LABEL[p.data.status] ?? p.data.status,
         temp: fmtTemp(temp),
-        tags: p.data.tags ?? [],
-        url: `/projects/`,
-        date: p.data.created ? p.data.created.toISOString().split('T')[0] : '',
+        tags: [],
+        url: `/projects/#${p.data.id.toLowerCase()}`,
+        date: '',
         body: p.body ? p.body.slice(0, 1500).replace(/[#*`>_[\]()]/g, ' ').replace(/\s+/g, ' ').trim() : '',
       };
     }),
-    ...log.map((l) => ({
+    ...dailyLogs.map((day) => ({
       type: 'log',
-      id: `LOG-${l.id}`,
-      slug: l.id,
-      title: `日志 · ${l.id}`,
-      subtitle: '',
-      excerpt: l.body ? l.body.slice(0, 160).replace(/[#*`>_[\]()]/g, ' ').replace(/\s+/g, ' ').trim() : '',
+      id: `LOG-${day.dateKey}`,
+      slug: day.dateKey,
+      title: `日志 · ${day.dateDot}`,
+      subtitle: day.summary ?? '',
+      excerpt: day.previewText,
       category: '实验日志',
-      status: '记录',
+      status: day.spanLabel || '记录',
       temp: '',
-      tags: l.data.tags ?? [],
-      url: `/log/#log-${l.id}`,
-      date: l.id,
-      body: l.body ? l.body.slice(0, 400).replace(/[#*`>_[\]()]/g, ' ').replace(/\s+/g, ' ').trim() : '',
+      tags: [...day.tags, ...day.kinds],
+      url: `/log/#${day.dayAnchorId}`,
+      date: day.dateKey,
+      body: day.moments
+        .map((m) => `${m.time ?? ''} ${m.kind ?? ''} ${m.rawText}`.trim())
+        .join(' · ')
+        .slice(0, 1200),
     })),
   ];
 

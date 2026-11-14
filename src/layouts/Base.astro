@@ -24,10 +24,11 @@ const { title, description = '在噪声退去之后,记录仍然成立的东西�
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const ogImage = new URL('/og.png', Astro.site);
 
-/* 站内文章即刻预览（hover 链接时弹出卡片）的数据 */
+/* 站内文章与项目即刻预览（hover 链接时弹出卡片）的数据 */
 const writingList = await getCollection('writing');
-const postPreviews = Object.fromEntries(
-  writingList.map((p) => [
+const projectList = await getCollection('projects');
+const postPreviews = Object.fromEntries([
+  ...writingList.map((p) => [
     `/writing/${p.id}/`,
     {
       id: p.data.id,
@@ -38,8 +39,21 @@ const postPreviews = Object.fromEntries(
       excerpt: p.data.excerpt,
       minutes: p.data.minutes ?? 8,
     },
-  ])
-);
+  ]),
+  ...projectList.map((p) => [
+    `/projects/#${p.data.id.toLowerCase()}`,
+    {
+      id: p.data.id,
+      title: p.data.title,
+      statusLabel: STATUS_LABEL[p.data.status],
+      statusColor: STATUS_COLOR[p.data.status],
+      tempStr: fmtTemp(tempOf(p.data.status, p.data.temperature)),
+      excerpt: p.data.subtitle || p.data.problem,
+      minutes: 0,
+      metaRight: p.data.state,
+    },
+  ]),
+]);
 ---
 <!doctype html>
 <html lang="zh-CN">

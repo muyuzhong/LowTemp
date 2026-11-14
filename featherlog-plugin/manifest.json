@@ -1,0 +1,86 @@
+{
+  "id": "lowtemp",
+  "name": "低温值班簿",
+  "version": "0.1.0",
+  "description": "记录每日时间线，同步至低温笔记并每日定时推送上线。",
+  "main": "main.js",
+  "ui": "ui.js",
+  "emits": ["lowtemp/day-changed", "lowtemp/status-changed"],
+  "listens": ["kernel/ready", "lowtemp/day-changed", "lowtemp/status-changed"],
+  "handles": [
+    "lowtemp/state",
+    "lowtemp/day",
+    "lowtemp/add",
+    "lowtemp/update",
+    "lowtemp/delete",
+    "lowtemp/set-summary",
+    "lowtemp/sync",
+    "lowtemp/push"
+  ],
+  "requests": [
+    "lowtemp/state",
+    "lowtemp/day",
+    "lowtemp/add",
+    "lowtemp/update",
+    "lowtemp/delete",
+    "lowtemp/set-summary",
+    "lowtemp/sync",
+    "lowtemp/push",
+    "shell/notify",
+    "shell/open-panel"
+  ],
+  "contributes": {
+    "collapsedIcons": [
+      {
+        "id": "lowtemp/quick",
+        "title": "记一刻",
+        "icon": "clock",
+        "order": 25,
+        "preview": true,
+        "opens": "lowtemp/book"
+      }
+    ],
+    "panelTabs": [
+      {
+        "id": "lowtemp/book",
+        "title": "时间线",
+        "icon": "clock",
+        "order": 25
+      }
+    ],
+    "settings": {
+      "title": "低温笔记同步",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "repoPath": {
+            "type": "string",
+            "default": "/home/muyuzhong/Projects/LowTemp",
+            "title": "低温笔记仓库路径",
+            "description": "本地 LowTemp 仓库根目录，时间线会写入其中的 src/content/log/YYYY-MM-DD.md。"
+          },
+          "autoSync": {
+            "type": "boolean",
+            "default": true,
+            "title": "落笔即刻写入本地日志",
+            "description": "每次新增、修改或写日结时，立即更新仓库里的 Markdown 文件。"
+          },
+          "dailyPush": {
+            "type": "boolean",
+            "default": true,
+            "title": "每日定时推送到线上",
+            "description": "每天到达设定钟点时，自动提交并推送日志目录到远端仓库。"
+          },
+          "pushHour": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 23,
+            "default": 22,
+            "title": "每日定时推送钟点",
+            "description": "24 小时制整点（例如 22 表示每晚 22:00 自动推送上线）。"
+          }
+        }
+      }
+    }
+  }
+}
