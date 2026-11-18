@@ -36,6 +36,13 @@ export const STATUS_COLOR: Record<Status, string> = {
   deprecated: 'var(--red)',
 };
 
+/** 首页温度谱尺刻度参数与四档物态色标位置（暖 → 冷） */
+export const THERMO_PHASES = ['draft', 'exploring', 'tested', 'stable'] as const;
+export const THERMO_STOP_AT = [0, 0.38, 0.66, 1] as const;
+export const THERMO_MAX = 20;
+export const THERMO_MIN = 3;
+export const THERMO_MAJORS = [20, 16, 12, 8, 4] as const;
+
 export const CATEGORY_LABEL: Record<string, string> = {
   engineering: '工程',
   research: '研究笔记',

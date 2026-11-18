@@ -129,7 +129,9 @@ ul, ol { padding: 0; list-style: none; }
   display: grid;
   align-items: center;
   min-block-size: 24px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  line-height: 24px;
 }
 .thermo-idle,
 .thermo-readout {
@@ -141,6 +143,7 @@ ul, ol { padding: 0; list-style: none; }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  line-height: 24px;
   transition: opacity 150ms var(--ease);
 }
 .thermo.is-live .thermo-idle {
@@ -149,7 +152,7 @@ ul, ol { padding: 0; list-style: none; }
 }
 .thermo-caption {
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 24px;
   color: var(--ink-2);
   white-space: nowrap;
 }
@@ -163,9 +166,8 @@ ul, ol { padding: 0; list-style: none; }
   position: relative;
   display: inline-flex;
   align-items: center;
-  padding: 2px 0;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 24px;
   color: var(--ink-2);
   white-space: nowrap;
   transition: color 150ms;
@@ -215,8 +217,10 @@ ul, ol { padding: 0; list-style: none; }
 
 .thermo-readout {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
+  font-size: 13px;
+  line-height: 24px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 150ms var(--ease);
@@ -227,10 +231,13 @@ ul, ol { padding: 0; list-style: none; }
 .thermo-readout-id {
   flex-shrink: 0;
   font-size: 12px;
+  line-height: 24px;
   color: var(--ink-2);
 }
 .thermo-readout-sep {
   flex-shrink: 0;
+  font-size: 13px;
+  line-height: 24px;
   color: var(--ink-2);
   opacity: 0.6;
 }
@@ -243,7 +250,7 @@ ul, ol { padding: 0; list-style: none; }
   font-family: var(--font-serif);
   font-size: 14.5px;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 24px;
   color: var(--ink-0);
 }
 .thermo-readout-meta {
@@ -254,7 +261,7 @@ ul, ol { padding: 0; list-style: none; }
   align-items: center;
   white-space: nowrap;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 24px;
   font-variant-numeric: tabular-nums;
   color: var(--ink-1);
 }
@@ -279,7 +286,7 @@ ul, ol { padding: 0; list-style: none; }
 }
 .thermo-pins {
   position: relative;
-  height: 24px;
+  height: 26px;
 }
 .thermo-pins > li {
   position: static;
@@ -288,7 +295,7 @@ ul, ol { padding: 0; list-style: none; }
   position: absolute;
   bottom: 0;
   width: 1px;
-  height: 24px;
+  height: 26px;
   transition: opacity 180ms var(--ease);
 }
 .thermo-pin::after {
@@ -354,7 +361,7 @@ ul, ol { padding: 0; list-style: none; }
 }
 .thermo-ticks {
   position: relative;
-  height: 24px;
+  height: 22px;
 }
 .thermo-ticks-svg,
 .log-rhythm-ticks-svg {
@@ -380,7 +387,7 @@ ul, ol { padding: 0; list-style: none; }
 .thermo-tick-label,
 .log-tick-label {
   position: absolute;
-  top: 13px;
+  top: 12px;
   left: 0;
   translate: -50% 0;
   font-family: var(--font-mono);
@@ -2330,7 +2337,7 @@ html[data-intro="leaving"] .intro-gate {
   *, *::before, *::after { background: transparent !important; box-shadow: none !important; }
   .site-header, .site-footer, .read-line, .reading-bar, .outline, .gauge, .toc, .focus-guide,
   .quote-bubble, .discussion, .post-readers, #bg-field, .intro-gate, .post-foot, .post-nav, .part-tabs, .part-pager, .link-popover, .cmd-palette, .copy-btn, .frame::before, .frame::after,
-  .log-rhythm, #log-filters { display: none !important; }
+  .thermo, .log-rhythm, #log-filters { display: none !important; }
   details.log-day > .log-timeline { display: block !important; }
   .part-pane[hidden] { display: block !important; margin-top: 24pt; }
   body { color: #111 !important; font-size: 11pt; line-height: 1.7; }

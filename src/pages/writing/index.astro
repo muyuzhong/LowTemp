@@ -74,6 +74,18 @@ const phases = (['stable', 'tested', 'exploring', 'draft', 'deprecated'] as Stat
         active[line.dataset.group as 'cat' | 'phase'] = btn.dataset.value || 'all';
         apply();
       });
+
+      /* 支持首页温度谱顶栏物态入口 ?phase=draft|exploring|tested|stable 直达对应筛选态 */
+      const initPhase = new URLSearchParams(location.search).get('phase');
+      if (initPhase) {
+        const phaseLine = root.querySelector<HTMLElement>('.filter-line[data-group="phase"]');
+        const phaseBtn = phaseLine?.querySelector<HTMLButtonElement>(`.chip[data-value="${CSS.escape(initPhase)}"]`);
+        if (phaseLine && phaseBtn) {
+          phaseLine.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c === phaseBtn));
+          active.phase = initPhase;
+          apply();
+        }
+      }
     });
   </script>
 </Base>

@@ -4,6 +4,7 @@
  *   - 针对当前页面 DOM 的增强放在 astro:page-load 里每次重做 */
 
 import { initBgField } from './bg-field';
+import { initThermo } from './thermo';
 
 type Win = Window & {
   openCommandPalette?: () => void;
@@ -52,6 +53,10 @@ function setupLinkPopover() {
   document.addEventListener('mouseover', (e) => {
     const a = (e.target as HTMLElement)?.closest?.('a');
     if (!a) return;
+    if (a.hasAttribute('data-no-popover')) {
+      hide();
+      return;
+    }
     const href = a.getAttribute('href');
     if (!href) return;
     let url: URL;
@@ -248,6 +253,7 @@ function bindGlobal() {
 
 function enhancePage() {
   setupLinkPopover();
+  initThermo();
   enhanceCode();
   document.querySelectorAll<HTMLElement>('.diff').forEach((d) => {
     if (d.dataset.bound) return;

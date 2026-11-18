@@ -57,9 +57,27 @@ const rhythmHours = [0, 6, 12, 18, 24];
         </div>
         <div class="log-rhythm-string" aria-hidden="true"></div>
         <div class="log-rhythm-ticks" aria-hidden="true">
-          {rhythmHours.map((h) => (
-            <span class="major" style={`left: ${(h / 24) * 100}%`}>
-              <b>{String(h).padStart(2, '0')}:00</b>
+          <svg class="log-rhythm-ticks-svg" aria-hidden="true" shape-rendering="crispEdges">
+            {Array.from({ length: 25 }, (_, h) => {
+              const pct = (h / 24) * 100;
+              const isMajor = h % 6 === 0;
+              return (
+                <line
+                  class:list={[{ major: isMajor }]}
+                  x1={`${pct.toFixed(4)}%`}
+                  x2={`${pct.toFixed(4)}%`}
+                  y1="0"
+                  y2={isMajor ? 9 : 4}
+                />
+              );
+            })}
+          </svg>
+          {rhythmHours.map((h, i) => (
+            <span
+              class:list={['log-tick-label', { 'is-first': i === 0, 'is-last': i === rhythmHours.length - 1 }]}
+              style={`left: ${((h / 24) * 100).toFixed(4)}%`}
+            >
+              {String(h).padStart(2, '0')}:00
             </span>
           ))}
         </div>

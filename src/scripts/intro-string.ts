@@ -11,6 +11,8 @@
  *  land  点击处一道弦波 → 两端收拢、整根下落、咬合到色带 → 刻度翻到色带下方 → 交给 DOM
  */
 
+import { THERMO_STOP_AT } from '../lib/temp';
+
 type RGB = [number, number, number];
 
 export interface Axis {
@@ -135,7 +137,7 @@ export function createStringScene(canvas: HTMLCanvasElement, measure: () => Axis
     line: [32, 36, 45] as RGB,
     stops: [] as RGB[], // 雾紫 → 液蓝 → 结晶中 → 结晶
   };
-  const STOP_AT = [0, 0.38, 0.66, 1]; // 与 .thermo-band 的渐变一致
+  const STOP_AT = THERMO_STOP_AT; // 与温度谱四档物态色标一致
   const parse = (value: string, fallback: RGB): RGB => {
     ctx.fillStyle = '#000';
     ctx.fillStyle = value.trim() || '#000';
@@ -178,7 +180,7 @@ export function createStringScene(canvas: HTMLCanvasElement, measure: () => Axis
       const half = Math.round(halfF);
       const isHalf = Math.abs(halfF - half) < 1e-6;
       const tau = Math.round((axis.max - k * step) * 1000) / 1000;
-      const inside = isHalf && half >= 0 && half < halves;
+      const inside = isHalf && half >= 0 && half <= halves;
       const kind = isHalf ? (isMajor(tau, inside) ? 2 : 1) : 0;
       ticks.push({ tau, x: axis.left + k * px, kind, keep: inside ? half : -1, h: BASE[kind], v: 0 });
     }
@@ -409,14 +411,22 @@ export function createStringScene(canvas: HTMLCanvasElement, measure: () => Axis
     const w = Math.max(fz, 1);
     const mask = (x: number) => smooth((x - xa + 1) / w) * smooth((xb - 0.5 - x) / w);
 
-    /* 1. 弦(落位时由发丝长成色带) */
+    /* 1. 弦(落位时与 1px 发丝温度尺咬合;若目标更厚也可平滑过渡) */
     const f = Math.min(0.5, fz / (xb - xa));
     const lineGrad = ctx.createLinearGradient(xa, 0, xb, 0);
-    const lc = rgba(col.ink2, LINE_A * (1 - q) * all);
-    lineGrad.addColorStop(0, rgba(col.ink2, 0));
-    lineGrad.addColorStop(f, lc);
-    lineGrad.addColorStop(1 - f, lc);
-    lineGrad.addColorStop(1, rgba(col.ink2, 0));
+    const hairlineTarget = to && to.thick <= 1.001;
+    const lineCol = hairlineTarget ? mix(col.ink2, mix(col.line, col.ink2, 0.38), q) : col.ink2;
+    const lineAlpha = (hairlineTarget ? lerp(LINE_A, to.bandAlpha, q) : LINE_A * (1 - q)) * all;
+    const lc = rgba(lineCol, lineAlpha);
+    if (f > 0.001) {
+      lineGrad.addColorStop(0, rgba(lineCol, 0));
+      lineGrad.addColorStop(f, lc);
+      lineGrad.addColorStop(1 - f, lc);
+      lineGrad.addColorStop(1, rgba(lineCol, 0));
+    } else {
+      lineGrad.addColorStop(0, lc);
+      lineGrad.addColorStop(1, lc);
+    }
     if (thick <= 1.001) {
       ctx.beginPath();
       if (flat) {
@@ -480,7 +490,7 @@ export function createStringScene(canvas: HTMLCanvasElement, measure: () => Axis
         const alpha = lerp(REST_A[k.kind], 1, Math.max(lit, pg * 0.5)) * a;
         if (flat) {
           ctx.fillStyle = rgba(c, alpha);
-          ctx.fillRect(snap(k.x), top - len, 1, len);
+          ctx.fillRect(snap(k.x - 0.5), top - len, 1, len);
         } else {
           /* 弦弯了:刻度沿弧线的法线方向展开 */
           const by = yl + disp(k.x) * env;
@@ -495,13 +505,13 @@ export function createStringScene(canvas: HTMLCanvasElement, measure: () => Axis
         }
       }
 
-      /* 落位:半度刻度从色带下方伸出来,长度与颜色和 .thermo-ticks 一致 */
+      /* 落位:半度刻度从色带下方伸出来,长度与颜色和 .thermo-ticks-svg 一致 */
       if (to && k.keep >= 0) {
         const grow = easeOut(clamp01((T - LAND.lock - st) / 150));
         if (grow > 0) {
           const major = k.kind === 2;
-          ctx.fillStyle = major ? rgba(col.ink2, 0.7 * a) : rgba(col.line, a);
-          ctx.fillRect(snap(k.x), yl + thick / 2 + to.gap, 1, (major ? to.major : to.half) * grow);
+          ctx.fillStyle = major ? rgba(col.ink2, 0.72 * a) : rgba(col.line, a);
+          ctx.fillRect(snap(k.x - 0.5), yl + thick / 2 + to.gap, 1, (major ? to.major : to.half) * grow);
         }
       }
     }

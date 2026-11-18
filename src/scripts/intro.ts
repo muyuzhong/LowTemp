@@ -11,10 +11,10 @@ const SEEN_KEY = 'intro-seen';
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 /* 立杆破土:冒出来时略微过头再落定 */
 const GROW = 'cubic-bezier(0.3, 1.4, 0.55, 1)';
-/* 与 global.css 的 .thermo-ticks 一致:色带下 3px 起,半度 6px,主刻度 12px */
-const TICK_GAP = 3;
-const TICK_HALF = 6;
-const TICK_MAJOR = 12;
+/* 与 ThermoStrip.astro 的 .thermo-ticks-svg 一致:色带下 0px 起,半度 5px,主刻度 10px */
+const TICK_GAP = 0;
+const TICK_HALF = 5;
+const TICK_MAJOR = 10;
 
 export function initIntro() {
   const root = document.documentElement;
@@ -26,6 +26,7 @@ export function initIntro() {
   const thermo = document.querySelector<HTMLElement>('main .thermo');
   const band = thermo?.querySelector<HTMLElement>('.thermo-band') ?? null;
   const tickRow = thermo?.querySelector<HTMLElement>('.thermo-ticks') ?? null;
+  const tickSvg = thermo?.querySelector<SVGElement>('.thermo-ticks-svg') ?? null;
   const max = Number(thermo?.dataset.max ?? 20);
   const min = Number(thermo?.dataset.min ?? 3);
   const majors = (thermo?.dataset.majors ?? '20,16,12,8,4').split(',').map(Number);
@@ -41,11 +42,12 @@ export function initIntro() {
     if (!band || !tickRow) return null;
     const b = band.getBoundingClientRect();
     if (b.width < 40) return null;
+    const tickRef = tickSvg ?? tickRow;
     return {
       y: b.top + b.height / 2,
       thick: b.height,
-      bandAlpha: Number(getComputedStyle(band).opacity) || 0.45,
-      gap: tickRow.getBoundingClientRect().top + TICK_GAP - b.bottom,
+      bandAlpha: Number(getComputedStyle(band).opacity) || 1,
+      gap: tickRef.getBoundingClientRect().top + TICK_GAP - b.bottom,
       half: TICK_HALF,
       major: TICK_MAJOR,
     };
@@ -104,44 +106,50 @@ export function initIntro() {
     const baseY = to?.y ?? scene.lineY;
     const vh = innerHeight;
 
-    /* 1. 色带与刻度:画布在 handoff 时把画面交过来 */
+    /* 1. 发丝弦与刻度:画布在 handoff 时把画面交过来 */
     if (to && band && tickRow) {
       const handoff = { delay: LAND.handoff, duration: LAND.fade, easing: 'linear' };
       play(band, [{ opacity: 0 }, { opacity: to.bandAlpha }], handoff);
       play(tickRow, [{ opacity: 0 }, { opacity: 1 }], handoff);
-      tickRow.querySelectorAll('.major b').forEach((b) =>
-        play(b, [{ opacity: 0, translate: '0 -3px' }, { opacity: 1, translate: '0 0' }], {
+      tickRow.querySelectorAll<HTMLElement>('.thermo-tick-label').forEach((b) => {
+        const tx = b.classList.contains('is-first') ? '0' : '-50%';
+        play(b, [{ opacity: 0, translate: `${tx} -3px` }, { opacity: 1, translate: `${tx} 0` }], {
           delay: LAND.handoff + 40,
           duration: 420,
           easing: EASE,
-        })
-      );
+        });
+      });
     } else {
       [band, tickRow].forEach((el) => el && play(el, [{ opacity: 0 }, { opacity: getComputedStyle(el).opacity }], { delay: 300, duration: 500, easing: EASE }));
     }
 
-    /* 2. 文章立杆:咔嗒之后从左到右、间隔 15ms,从色带上长出来;杆顶圆点随杆尖升起 */
+    /* 2. 谱线立杆:咔嗒之后从左到右、间隔 15ms,从发丝弦上破土长出;杆顶圆点随杆尖升起 */
     const pins = [...document.querySelectorAll<HTMLElement>('main .thermo-pin')]
-      .map((el) => ({ el, x: el.getBoundingClientRect().left, h: getComputedStyle(el).height }))
+      .map((el) => ({ el, x: el.getBoundingClientRect().left }))
       .sort((a, b) => a.x - b.x);
-    const pseudo = typeof KeyframeEffect !== 'undefined' && 'pseudoElement' in KeyframeEffect.prototype;
-    pins.forEach(({ el, h }, i) => {
+    pins.forEach(({ el }, i) => {
       const delay = LAND.lock + 40 + Math.min(i * 15, 240);
-      play(el, [{ height: '0px' }, { height: h }], { delay, duration: 440, easing: GROW });
-      if (pseudo) play(el, [{ scale: '0.2', opacity: 0 }, { scale: '1', opacity: 1 }], { pseudoElement: '::before', delay, duration: 280, easing: EASE });
-      const label = el.querySelector('.thermo-label');
-      if (label) play(label, [{ opacity: 0 }, { opacity: 1 }], { delay: delay + 240, duration: 360, easing: EASE });
+      const stem = el.querySelector<HTMLElement>('.thermo-stem');
+      const dot = el.querySelector<HTMLElement>('.thermo-dot');
+      const h = stem?.offsetHeight || 15;
+      if (stem) {
+        play(stem, [{ scale: '1 0' }, { scale: '1 1' }], { delay, duration: 440, easing: GROW });
+      }
+      if (dot) {
+        play(dot, [{ translate: `-50% ${h}px` }, { translate: '-50% 0' }], { delay, duration: 440, easing: GROW });
+        play(dot, [{ scale: '0.2', opacity: 0 }, { scale: '1', opacity: 1 }], { delay, duration: 280, easing: EASE });
+      }
     });
 
     /* 3. 其余内容顺着基准线浮现:离线越近越早;线上方的往上浮,线下方的往下沉。
-     *    温度尺的图例要等刻度交到 DOM 之后,不然尺子还没出现,说明先到了 */
-    const legend = document.querySelector('main .thermo-legend');
+     *    温度尺顶栏说明要等刻度交到 DOM 之后再出现 */
+    const head = document.querySelector('main .thermo-head');
     const blocks = [
       '.site-header',
       'main .intro > h1',
       'main .intro-sub',
       'main .intro-tags',
-      'main .thermo-legend',
+      'main .thermo-head',
       'main .section-head',
       'main .entries > .entry',
       '.site-footer',
@@ -151,7 +159,7 @@ export function initIntro() {
       .filter(({ r }) => r.bottom > 0 && r.top < vh) // 视口外的不用动
       .forEach(({ el, r }) => {
         const d = (r.top + r.bottom) / 2 - baseY;
-        const delay = el === legend ? LAND.handoff + 60 : LAND.lock - 40 + Math.min(260, Math.abs(d) * 0.3);
+        const delay = el === head ? LAND.handoff + 60 : LAND.lock - 40 + Math.min(260, Math.abs(d) * 0.3);
         play(el, [{ opacity: 0, translate: `0 ${d < 0 ? 10 : -10}px` }, { opacity: getComputedStyle(el).opacity, translate: '0 0' }], {
           delay,
           duration: 520,
