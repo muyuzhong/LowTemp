@@ -10,12 +10,18 @@
   --line: #20242d;
   --line-soft: #181b22;
 
-  /* 唯一强调色 + 四个温度色（温度色只用于圆点与数值） */
+  /* 唯一强调色 + 图表辅助色（保留供文章内 .fig svg 使用） */
   --accent: #8b82d9;
   --blue: #6e9fcb;
   --teal: #70aaa6;
   --mauve: #8a84a3;
   --red: #c1787a;
+
+  /* 银盐冷暖灰四档物态色（Split-Tone Grey：微暖亚麻灰 → 卵石银灰 → 钛钢冷灰 → 冰川寒铁） */
+  --phase-draft: #787067;
+  --phase-exploring: #8c9096;
+  --phase-tested: #9eb4c9;
+  --phase-stable: #d4e8fa;
 
   /* 聚焦阅读：当前行 → 邻行 → 其余行 的亮度梯度 */
   --read-l1: color-mix(in srgb, var(--ink-0) 72%, var(--bg-0));
@@ -50,6 +56,11 @@
   --teal: #3e7b77;
   --mauve: #6f6a86;
   --red: #a45355;
+
+  --phase-draft: #a39b92;
+  --phase-exploring: #797b7e;
+  --phase-tested: #465360;
+  --phase-stable: #182633;
 
   --read-l1: color-mix(in srgb, var(--ink-0) 78%, var(--bg-0));
   --read-l2: color-mix(in srgb, var(--ink-0) 62%, var(--bg-0));

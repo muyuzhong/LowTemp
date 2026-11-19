@@ -61,15 +61,6 @@ const connected = [
   ...relatedNotes.map((n) => ({ tag: '同类 ~', href: `/writing/${n.id}/`, id: n.data.id, title: n.data.title })),
 ];
 
-const notePrompt =
-  d.status === 'draft' || d.status === 'exploring'
-    ? `本文尚处「${STATUS_LABEL[d.status]} ${fmtTemp(temp)}」，欢迎留下反例、边界情况或延伸视角。`
-    : d.status === 'tested'
-      ? `本文处于「${STATUS_LABEL[d.status]} ${fmtTemp(temp)}」，欢迎补充真实项目中的反例或实践观察。`
-      : d.status === 'stable'
-        ? `本文已趋「${STATUS_LABEL[d.status]} ${fmtTemp(temp)}」，若遇到相悖案例或有延伸讨论，欢迎记录于此。`
-        : '本文观点已升华存档，欢迎补充考据或延伸讨论。';
-
 const rawMarkdown = `---
 id: ${d.id}
 title: "${d.title}"
@@ -306,8 +297,6 @@ ${entry.body || ''}
 
     <div id="quote-bubble" class="quote-bubble" aria-hidden="true">
       <button type="button" id="quote-copy-btn">复制为引文</button>
-      <span class="quote-sep" aria-hidden="true"></span>
-      <button type="button" id="quote-note-btn">就此探讨</button>
     </div>
 
     {d.notes && d.notes.length > 0 && (
@@ -360,107 +349,6 @@ ${entry.body || ''}
         </ul>
       </aside>
     )}
-
-    <section class="discussion" id="discussion" aria-labelledby="discussion-heading">
-      <div class="disc-head">
-        <h2 id="discussion-heading" class="block-title">研讨与反例</h2>
-        <span id="discussion-count" class="disc-count"></span>
-        <button type="button" id="disc-admin-btn" class="disc-admin-btn">作者</button>
-      </div>
-
-      <form id="disc-admin-form" class="disc-admin-bar" action="/api/lab" method="POST" hidden>
-        <label for="disc-admin-input">作者口令</label>
-        <input
-          type="password"
-          id="disc-admin-input"
-          name="token"
-          autocomplete="current-password"
-          autocorrect="off"
-          autocapitalize="none"
-          spellcheck="false"
-          placeholder="输入 ADMIN_TOKEN 解锁页内回复与管理"
-        />
-        <button type="submit" class="disc-op-btn is-primary">验证</button>
-        <button type="button" id="disc-admin-cancel" class="disc-op-btn">取消</button>
-        <span id="disc-admin-error" class="disc-error-inline" role="status" aria-live="polite" hidden></span>
-      </form>
-
-      <p id="disc-empty" class="disc-lead">{notePrompt}</p>
-
-      <ol id="disc-list" class="disc-list"></ol>
-
-      <div id="disc-compose-home" class="disc-compose-home">
-        <div id="disc-compose-wrap" class="disc-compose">
-          <form id="disc-form" class="disc-form" action="/api/lab" method="POST" novalidate>
-            <div class="visually-hidden" aria-hidden="true">
-              <label for="disc-website">Website</label>
-              <input type="text" id="disc-website" name="website" tabindex="-1" autocomplete="off" />
-            </div>
-
-            <div id="disc-reply-banner" class="disc-reply-banner" hidden>
-              <span>正在回复 <strong id="disc-reply-target"></strong></span>
-              <button type="button" id="disc-reply-cancel" class="disc-op-btn">取消回复</button>
-            </div>
-
-            <div id="disc-quote-wrap" class="disc-quote-attached" hidden>
-              <blockquote id="disc-quote-text"></blockquote>
-              <button type="button" id="disc-quote-clear" class="disc-op-btn">移除引文</button>
-            </div>
-
-            <div id="disc-identity-row" class="disc-identity">
-              <div class="disc-field">
-                <label for="disc-nickname">称呼 <span aria-hidden="true">*</span></label>
-                <input
-                  type="text"
-                  id="disc-nickname"
-                  name="nickname"
-                  required
-                  maxlength="32"
-                  autocomplete="nickname"
-                  placeholder="怎么称呼你"
-                />
-              </div>
-              <div id="disc-email-field" class="disc-field">
-                <label for="disc-email">邮箱（选填，不公开）</label>
-                <input
-                  type="email"
-                  id="disc-email"
-                  name="email"
-                  maxlength="120"
-                  autocomplete="email"
-                  autocorrect="off"
-                  autocapitalize="none"
-                  spellcheck="false"
-                  placeholder="仅作者可见，便于后续交流"
-                />
-              </div>
-            </div>
-
-            <div class="disc-field">
-              <label for="disc-content">讨论、补充或反例 <span aria-hidden="true">*</span></label>
-              <div id="disc-grow" class="growable-textarea" data-replicated-value="">
-                <textarea
-                  id="disc-content"
-                  name="content"
-                  required
-                  minlength="2"
-                  maxlength="3000"
-                  aria-describedby="disc-hint disc-error"
-                  placeholder="写下你的观点、反例或延伸观察（正文中选中任意句子可点「就此探讨」附带引文）…"
-                ></textarea>
-              </div>
-              <p id="disc-error" class="disc-error" role="status" aria-live="polite" hidden></p>
-            </div>
-
-            <div class="disc-actions">
-              <button type="submit" id="disc-submit" class="disc-submit">发表记录 →</button>
-              <span id="disc-hint" class="disc-hint">无点赞 · 按时间顺序排列 · Ctrl + Enter 发送</span>
-              <span id="disc-status" class="disc-status" role="status" aria-live="polite"></span>
-            </div>
-          </form>
-        </div>
-      </div>
-    </section>
 
     <nav class="post-nav" aria-label="相邻文章">
       <div>
@@ -811,7 +699,7 @@ ${entry.body || ''}
         }
       }
 
-      /* 4. 单篇阅读人数 + 划词探讨 + 无框反例投递 */
+      /* 4. 单篇阅读人数 + 划词复制引文 */
       initArticleInteract({
         prose,
         archiveId: col.dataset.archiveId || '',

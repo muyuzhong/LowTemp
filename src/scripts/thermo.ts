@@ -1,15 +1,15 @@
-/* 首页低温光谱尺交互（ThermoStrip）：
- *   - 轨道磁性游标：指针横掠时 0ms 锁定最近谱线立杆，顶栏实时切换为编号 · 标题 · 物态温度读数
- *   - 游标卡尺细刻度起伏（仅 prefers-reduced-motion: no-preference）：高斯钟形拉伸邻近 SVG 刻度线
- *   - 物态透镜：悬停或聚焦顶栏四档物态时按物态高亮对应立杆、压暗其余
- *   - 键盘支持：聚焦立杆同步读数，← / → 在谱线上逐根移动，Esc 复位 */
+/* 首页低温光谱调谐带交互（ThermoStrip）：
+ *   - 驻留式调谐读数：SSR 默认停靠最新发布文章；指针横掠光栅槽时实时磁吸锁定最近谱线，离开后保持停靠在当前调谐频道（如物理收音机旋钮）
+ *   - 幽灵游丝与对称光栅起伏（prefers-reduced-motion: no-preference）：横掠时显示 1px 游丝，邻近 0.2°C 光栅线从中心对称舒张
+ *   - 底栏物态透镜：悬停或聚焦四档物态时压暗异相谱线，临时预览该物态最新文章，移开后恢复原停靠频道
+ *   - 键盘支持：聚焦谱线同步调谐，← / → / Home / End 逐根调台，Esc 清除过滤或失焦 */
 
 let thermoAc: AbortController | undefined;
 let swapBound = false;
 
-const SIGMA = 26;
+const SIGMA = 22;
 const INV_2_SIGMA2 = 1 / (2 * SIGMA * SIGMA);
-const TICK_CUTOFF = SIGMA * 3;
+const TICK_CUTOFF = SIGMA * 2.8;
 
 export function initThermo() {
   thermoAc?.abort();
@@ -28,6 +28,7 @@ export function initThermo() {
   const phases = [...thermo.querySelectorAll<HTMLAnchorElement>('.thermo-phase')];
   const ticks = [...thermo.querySelectorAll<SVGLineElement>('.thermo-ticks-svg line')];
 
+  const readoutLink = thermo.querySelector<HTMLAnchorElement>('.thermo-readout-link');
   const readoutId = thermo.querySelector<HTMLElement>('.thermo-readout-id');
   const readoutTitle = thermo.querySelector<HTMLElement>('.thermo-readout-title');
   const readoutTemp = thermo.querySelector<HTMLElement>('.thermo-readout-temp');
@@ -42,14 +43,26 @@ export function initThermo() {
   const pinRatio = pins.map((p) => Number(p.dataset.x || 0) / 100);
   const tickCount = ticks.length;
   const tickRatio = ticks.map((_, j) => (tickCount > 1 ? j / (tickCount - 1) : 0));
-  const tickMajor = ticks.map((l) => l.dataset.major === '1');
+  const tickTier = ticks.map((l) => Number(l.dataset.tier || 0)); // 0: 0.2°C, 1: 1°C, 2: 4°C
   const tickScaled = new Uint8Array(tickCount);
+
+  /* 每个物态内最新发布的一篇，供底栏物态透镜悬停时临时预览 */
+  const newestByPhase = new Map<string, HTMLAnchorElement>();
+  for (const p of pins) {
+    const ph = p.dataset.phase;
+    if (!ph) continue;
+    const prev = newestByPhase.get(ph);
+    if (!prev || Number(p.dataset.published || 0) > Number(prev.dataset.published || 0)) {
+      newestByPhase.set(ph, p);
+    }
+  }
+
+  let parkedPin: HTMLAnchorElement =
+    pins.find((p) => p.classList.contains('is-active')) ?? pins[0];
+  let displayedPin: HTMLAnchorElement = parkedPin;
 
   let trackLeft = 0;
   let trackWidth = 0;
-  let activePin: HTMLAnchorElement | null = null;
-  let pointerInside = false;
-  let touchPinned = false;
   let downX: number | null = null;
   let scrubbed = false;
 
@@ -68,36 +81,41 @@ export function initThermo() {
     }
   };
 
-  const setReadout = (pin: HTMLAnchorElement) => {
-    if (activePin !== pin) {
-      activePin?.classList.remove('is-active');
-      activePin = pin;
-      pin.classList.add('is-active');
-      if (readoutId) readoutId.textContent = pin.dataset.id || '';
-      if (readoutTitle) readoutTitle.textContent = pin.dataset.title || '';
-      if (readoutTemp) {
-        readoutTemp.textContent = `${pin.dataset.statusLabel || ''} ${pin.dataset.temp || ''}`.trim();
-      }
-      if (readoutDot) readoutDot.style.backgroundColor = pin.dataset.color || '';
+  const setDisplayedPin = (pin: HTMLAnchorElement, commitPark: boolean) => {
+    if (commitPark) {
+      parkedPin = pin;
     }
-    thermo.classList.add('is-live');
-    delete thermo.dataset.filterPhase;
-  };
+    if (displayedPin !== pin) {
+      displayedPin.classList.remove('is-active');
+      displayedPin = pin;
+      pin.classList.add('is-active');
+    } else if (!pin.classList.contains('is-active')) {
+      pin.classList.add('is-active');
+    }
 
-  const clearActive = () => {
-    activePin?.classList.remove('is-active');
-    activePin = null;
-    thermo.classList.remove('is-live');
-    resetTicks();
+    if (pin.dataset.x) {
+      thermo.style.setProperty('--pointer-x', `${pin.dataset.x}%`);
+    }
+    if (readoutLink) readoutLink.href = pin.href;
+    if (readoutId) readoutId.textContent = pin.dataset.id || '';
+    if (readoutTitle) readoutTitle.textContent = pin.dataset.title || '';
+    if (readoutTemp) {
+      readoutTemp.textContent = `${pin.dataset.state || ''} · ${pin.dataset.temp || ''}`.trim();
+    }
+    if (readoutDot && pin.dataset.color) {
+      readoutDot.style.background = pin.dataset.color;
+    }
   };
 
   const updateAtClientX = (clientX: number) => {
     if (trackWidth <= 0) refreshRect();
     if (trackWidth <= 0) return;
 
-    const relX = clientX - trackLeft;
+    const relX = Math.max(0, Math.min(trackWidth, clientX - trackLeft));
+    track.classList.add('is-scrubbing');
+    track.style.setProperty('--ghost-x', `${relX.toFixed(1)}px`);
+    delete thermo.dataset.filterPhase;
 
-    /* 寻找水平方向最近的谱线立杆（全轨道磁吸，也可在 80px 邻域内瞬时锁定） */
     let nearest = pins[0];
     let minDist = Infinity;
     for (let i = 0; i < pins.length; i++) {
@@ -107,9 +125,8 @@ export function initThermo() {
         nearest = pins[i];
       }
     }
-    setReadout(nearest);
+    setDisplayedPin(nearest, true);
 
-    /* 游标卡尺刻度响应：仅在允许动效时按高斯钟形缩放邻近 SVG 刻度 */
     if (motionOk.matches && tickCount > 0) {
       for (let j = 0; j < tickCount; j++) {
         const dx = tickRatio[j] * trackWidth - relX;
@@ -120,22 +137,27 @@ export function initThermo() {
           }
         } else {
           const g = Math.exp(-dx * dx * INV_2_SIGMA2);
-          const scale = 1 + (tickMajor[j] ? 0.2 : 0.7) * g;
-          ticks[j].style.setProperty('--ts', scale.toFixed(3));
+          const tier = tickTier[j];
+          const boost = tier === 2 ? 0.28 : tier === 1 ? 0.42 : 0.56;
+          ticks[j].style.setProperty('--ts', (1 + boost * g).toFixed(3));
           tickScaled[j] = 1;
         }
       }
     }
   };
 
-  /* 1. 轨道指针交互 */
+  const endScrub = () => {
+    track.classList.remove('is-scrubbing');
+    resetTicks();
+    downX = null;
+  };
+
+  /* 1. 光栅槽指针调谐 */
   track.addEventListener(
     'pointerenter',
     (e) => {
       refreshRect();
       if (e.pointerType === 'mouse' || e.pointerType === 'pen') {
-        pointerInside = true;
-        touchPinned = false;
         updateAtClientX(e.clientX);
       }
     },
@@ -148,9 +170,6 @@ export function initThermo() {
       refreshRect();
       downX = e.clientX;
       scrubbed = false;
-      if (e.pointerType !== 'mouse') {
-        touchPinned = true;
-      }
       updateAtClientX(e.clientX);
     },
     { signal }
@@ -162,40 +181,14 @@ export function initThermo() {
       if (downX != null && Math.abs(e.clientX - downX) > 10) {
         scrubbed = true;
       }
-      if (e.pointerType === 'mouse' || e.pointerType === 'pen') {
-        pointerInside = true;
-      }
       updateAtClientX(e.clientX);
     },
     { passive: true, signal }
   );
 
-  const onPointerEnd = (e: PointerEvent) => {
-    if (e.pointerType !== 'mouse') {
-      resetTicks();
-    }
-    downX = null;
-  };
-  track.addEventListener('pointerup', onPointerEnd, { signal });
-  track.addEventListener('pointercancel', onPointerEnd, { signal });
-
-  track.addEventListener(
-    'pointerleave',
-    (e) => {
-      if (e.pointerType === 'mouse' || e.pointerType === 'pen') {
-        pointerInside = false;
-        downX = null;
-        const focusedPin = pinList?.querySelector<HTMLAnchorElement>('.thermo-pin:focus');
-        if (focusedPin) {
-          resetTicks();
-          setReadout(focusedPin);
-        } else {
-          clearActive();
-        }
-      }
-    },
-    { signal }
-  );
+  track.addEventListener('pointerup', endScrub, { signal });
+  track.addEventListener('pointercancel', endScrub, { signal });
+  track.addEventListener('pointerleave', endScrub, { signal });
 
   track.addEventListener(
     'click',
@@ -208,46 +201,26 @@ export function initThermo() {
       }
       const directLink = (e.target as HTMLElement | null)?.closest?.('a');
       if (directLink) return;
-      if (activePin) {
+      if (displayedPin) {
         if (e.metaKey || e.ctrlKey) {
-          window.open(activePin.href, '_blank', 'noopener');
+          window.open(displayedPin.href, '_blank', 'noopener');
         } else {
-          activePin.click();
+          displayedPin.click();
         }
       }
     },
     { signal }
   );
 
-  /* 触屏横掠后点击尺外区域收起读数 */
-  document.addEventListener(
-    'pointerdown',
-    (e) => {
-      if (touchPinned && !thermo.contains(e.target as Node)) {
-        touchPinned = false;
-        clearActive();
-      }
-    },
-    { signal }
-  );
-
-  /* 2. 键盘聚焦与左右方向键漫游 */
+  /* 2. 键盘聚焦与左右方向键调台 */
   if (pinList) {
     pinList.addEventListener(
       'focusin',
       (e) => {
         const pin = (e.target as HTMLElement | null)?.closest?.<HTMLAnchorElement>('.thermo-pin');
-        if (pin) setReadout(pin);
-      },
-      { signal }
-    );
-
-    pinList.addEventListener(
-      'focusout',
-      (e) => {
-        const next = e.relatedTarget as Node | null;
-        if (!next || !pinList.contains(next)) {
-          if (!pointerInside && !touchPinned) clearActive();
+        if (pin) {
+          delete thermo.dataset.filterPhase;
+          setDisplayedPin(pin, true);
         }
       },
       { signal }
@@ -276,9 +249,8 @@ export function initThermo() {
         } else if (e.key === 'Escape') {
           e.preventDefault();
           e.stopPropagation();
-          touchPinned = false;
+          delete thermo.dataset.filterPhase;
           pin.blur();
-          clearActive();
         }
       },
       { signal }
@@ -288,60 +260,42 @@ export function initThermo() {
   window.addEventListener(
     'keydown',
     (e) => {
-      if (e.key === 'Escape' && thermo.classList.contains('is-live')) {
-        touchPinned = false;
+      if (e.key === 'Escape') {
+        if (thermo.dataset.filterPhase) {
+          delete thermo.dataset.filterPhase;
+          setDisplayedPin(parkedPin, false);
+        }
         const activeEl = document.activeElement as HTMLElement | null;
         if (activeEl && thermo.contains(activeEl)) activeEl.blur();
-        clearActive();
       }
     },
     { signal }
   );
 
-  /* 3. 顶栏四档物态透镜过滤 */
+  /* 3. 底栏四档物态透镜过滤（临时预览该物态最新文章，移开恢复停靠频道） */
   for (const ph of phases) {
     const phase = ph.dataset.phase;
     if (!phase) continue;
 
-    ph.addEventListener(
-      'pointerenter',
-      () => {
-        if (!thermo.classList.contains('is-live')) {
-          thermo.dataset.filterPhase = phase;
-        }
-      },
-      { signal }
-    );
+    const previewPhase = () => {
+      thermo.dataset.filterPhase = phase;
+      const preview = newestByPhase.get(phase);
+      if (preview) {
+        setDisplayedPin(preview, false);
+      }
+    };
 
-    ph.addEventListener(
-      'pointerleave',
-      () => {
-        if (thermo.dataset.filterPhase === phase) {
-          delete thermo.dataset.filterPhase;
-        }
-      },
-      { signal }
-    );
+    const restorePhase = () => {
+      if (thermo.dataset.filterPhase === phase) {
+        delete thermo.dataset.filterPhase;
+        setDisplayedPin(parkedPin, false);
+      }
+    };
 
-    ph.addEventListener(
-      'focus',
-      () => {
-        touchPinned = false;
-        clearActive();
-        thermo.dataset.filterPhase = phase;
-      },
-      { signal }
-    );
-
-    ph.addEventListener(
-      'blur',
-      () => {
-        if (thermo.dataset.filterPhase === phase) {
-          delete thermo.dataset.filterPhase;
-        }
-      },
-      { signal }
-    );
+    ph.addEventListener('pointerenter', previewPhase, { signal });
+    ph.addEventListener('pointerleave', restorePhase, { signal });
+    ph.addEventListener('focus', previewPhase, { signal });
+    ph.addEventListener('blur', restorePhase, { signal });
   }
 
   window.addEventListener('resize', refreshRect, { passive: true, signal });

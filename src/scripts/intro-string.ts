@@ -132,10 +132,11 @@ export function createStringScene(canvas: HTMLCanvasElement, measure: () => Axis
 
   /* 颜色:从主题 token 读,经 canvas 规范化成 RGB */
   const col = {
+    ink0: [214, 218, 227] as RGB,
     ink1: [139, 145, 160] as RGB,
     ink2: [106, 112, 128] as RGB,
     line: [32, 36, 45] as RGB,
-    stops: [] as RGB[], // 雾紫 → 液蓝 → 结晶中 → 结晶
+    stops: [] as RGB[], // 银盐冷暖灰:雾 → 液态 → 结晶中 → 结晶
   };
   const STOP_AT = THERMO_STOP_AT; // 与温度谱四档物态色标一致
   const parse = (value: string, fallback: RGB): RGB => {
@@ -149,10 +150,16 @@ export function createStringScene(canvas: HTMLCanvasElement, measure: () => Axis
   const readColors = () => {
     const cs = getComputedStyle(document.documentElement);
     const v = (name: string, fb: RGB) => parse(cs.getPropertyValue(name), fb);
+    col.ink0 = v('--ink-0', col.ink0);
     col.ink1 = v('--ink-1', col.ink1);
     col.ink2 = v('--ink-2', col.ink2);
     col.line = v('--line', col.line);
-    col.stops = [v('--mauve', [138, 132, 163]), v('--blue', [110, 159, 203]), v('--accent', [139, 130, 217]), v('--teal', [112, 170, 166])];
+    col.stops = [
+      v('--phase-draft', [120, 112, 103]),
+      v('--phase-exploring', [140, 144, 150]),
+      v('--phase-tested', [158, 180, 201]),
+      v('--phase-stable', [212, 232, 250]),
+    ];
   };
 
   /** 某温度的物态色 */
@@ -477,9 +484,8 @@ export function createStringScene(canvas: HTMLCanvasElement, measure: () => Axis
       if (a < 0.003) continue;
 
       let len = k.h;
-      let st = 0;
-      if (to && k.keep >= 0) {
-        st = 60 * clamp01((k.x - axis.left) / (axis.right - axis.left));
+      if (to && k.x >= axis.left - 1 && k.x <= axis.right + 1) {
+        const st = 60 * clamp01((k.x - axis.left) / (axis.right - axis.left));
         len *= 1 - easeOut(clamp01((T - LAND.flip - st) / 110));
       }
 
@@ -504,15 +510,25 @@ export function createStringScene(canvas: HTMLCanvasElement, measure: () => Axis
           ctx.stroke();
         }
       }
+    }
 
-      /* 落位:半度刻度从色带下方伸出来,长度与颜色和 .thermo-ticks-svg 一致 */
-      if (to && k.keep >= 0) {
+    /* 落位:86 根 0.2°C 对称光栅线从中心基准线上下同时舒张,与 .thermo-ticks-svg 逐像素咬合 */
+    if (to && T >= LAND.lock) {
+      const gSteps = Math.round((axis.max - axis.min) / 0.2);
+      const spanW = axis.right - axis.left;
+      const isDark = document.documentElement.dataset.theme !== 'light';
+      for (let gi = 0; gi <= gSteps; gi++) {
+        const frac = gi / gSteps;
+        const st = 60 * frac;
         const grow = easeOut(clamp01((T - LAND.lock - st) / 150));
-        if (grow > 0) {
-          const major = k.kind === 2;
-          ctx.fillStyle = major ? rgba(col.ink2, 0.72 * a) : rgba(col.line, a);
-          ctx.fillRect(snap(k.x - 0.5), yl + thick / 2 + to.gap, 1, (major ? to.major : to.half) * grow);
-        }
+        if (grow <= 0) continue;
+        const gx = axis.left + frac * spanW;
+        const isMaj = gi % 20 === 0;
+        const isInt = !isMaj && gi % 5 === 0;
+        const halfLen = (isMaj ? to.major : isInt ? 5.5 : to.half) * grow;
+        const ga = (isMaj ? (isDark ? 0.32 : 0.34) : isInt ? (isDark ? 0.18 : 0.20) : (isDark ? 0.10 : 0.12)) * all;
+        ctx.fillStyle = rgba(col.ink0, ga);
+        ctx.fillRect(snap(gx - 0.5), yl - halfLen, 1, halfLen * 2);
       }
     }
 

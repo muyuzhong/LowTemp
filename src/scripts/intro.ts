@@ -1,20 +1,20 @@
 /* 首页入场:一根弦(画面见 intro-string.ts,design.md §2.6)
  *
  * 这里只管「门」:遮罩、进入,以及进入时首页各部分怎样接上那根弦。
- * 点击任意处 / 按任意键 / 向下滚动 → 弦按 LAND 时间线落到温度尺的色带上;
- * 咬合的同时,文章立杆从左到右从色带上长出来,页头、标题、文章列表顺着这根基准线浮现。
+ * 点击任意处 / 按任意键 / 向下滚动 → 弦按 LAND 时间线落到光谱调谐带的中心基准线上,
+ * 化作 86 根对称光栅刻度;同时 2px 银盐谱线从左到右对称舒张,常驻三角调谐针落位,
+ * 页头、标题、文章列表顺着这根基准线浮现。
  * 是否出现由 Base.astro <head> 的内联脚本在绘制前决定(每个会话一次,?intro 强制重播)。
  */
 import { createStringScene, LAND, type Axis, type Landing } from './intro-string';
 
 const SEEN_KEY = 'intro-seen';
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
-/* 立杆破土:冒出来时略微过头再落定 */
+/* 谱线舒张:冒出来时略微过头再落定 */
 const GROW = 'cubic-bezier(0.3, 1.4, 0.55, 1)';
-/* 与 ThermoStrip.astro 的 .thermo-ticks-svg 一致:色带下 0px 起,半度 5px,主刻度 10px */
-const TICK_GAP = 0;
-const TICK_HALF = 5;
-const TICK_MAJOR = 10;
+/* 与 ThermoStrip.astro 的对称光栅半长一致:0.2°C 细线 ±4.2px,4°C 主线 ±7.5px */
+const GRATING_HALF_FINE = 4.2;
+const GRATING_HALF_MAJOR = 7.5;
 
 export function initIntro() {
   const root = document.documentElement;
@@ -25,13 +25,13 @@ export function initIntro() {
 
   const thermo = document.querySelector<HTMLElement>('main .thermo');
   const band = thermo?.querySelector<HTMLElement>('.thermo-band') ?? null;
-  const tickRow = thermo?.querySelector<HTMLElement>('.thermo-ticks') ?? null;
   const tickSvg = thermo?.querySelector<SVGElement>('.thermo-ticks-svg') ?? null;
+  const pointer = thermo?.querySelector<HTMLElement>('.thermo-pointer') ?? null;
   const max = Number(thermo?.dataset.max ?? 20);
   const min = Number(thermo?.dataset.min ?? 3);
   const majors = (thermo?.dataset.majors ?? '20,16,12,8,4').split(',').map(Number);
 
-  /* 弦的横坐标 = 温度尺的横坐标;没有温度尺时假装版心居中 */
+  /* 弦的横坐标 = 光谱调谐带的横坐标;没有调谐带时假装版心居中 */
   const measure = (): Axis => {
     const r = band?.getBoundingClientRect();
     if (r && r.width > 40) return { left: r.left, right: r.right, max, min, majors };
@@ -39,17 +39,16 @@ export function initIntro() {
     return { left: (innerWidth - w) / 2, right: (innerWidth + w) / 2, max, min, majors };
   };
   const landing = (): Landing | null => {
-    if (!band || !tickRow) return null;
+    if (!band || !tickSvg) return null;
     const b = band.getBoundingClientRect();
     if (b.width < 40) return null;
-    const tickRef = tickSvg ?? tickRow;
     return {
       y: b.top + b.height / 2,
-      thick: b.height,
-      bandAlpha: Number(getComputedStyle(band).opacity) || 1,
-      gap: tickRef.getBoundingClientRect().top + TICK_GAP - b.bottom,
-      half: TICK_HALF,
-      major: TICK_MAJOR,
+      thick: 1,
+      bandAlpha: 0,
+      gap: 0,
+      half: GRATING_HALF_FINE,
+      major: GRATING_HALF_MAJOR,
     };
   };
 
@@ -106,50 +105,47 @@ export function initIntro() {
     const baseY = to?.y ?? scene.lineY;
     const vh = innerHeight;
 
-    /* 1. 发丝弦与刻度:画布在 handoff 时把画面交过来 */
-    if (to && band && tickRow) {
-      const handoff = { delay: LAND.handoff, duration: LAND.fade, easing: 'linear' };
-      play(band, [{ opacity: 0 }, { opacity: to.bandAlpha }], handoff);
-      play(tickRow, [{ opacity: 0 }, { opacity: 1 }], handoff);
-      tickRow.querySelectorAll<HTMLElement>('.thermo-tick-label').forEach((b) => {
-        const tx = b.classList.contains('is-first') ? '0' : '-50%';
-        play(b, [{ opacity: 0, translate: `${tx} -3px` }, { opacity: 1, translate: `${tx} 0` }], {
-          delay: LAND.handoff + 40,
-          duration: 420,
-          easing: EASE,
-        });
+    /* 1. 对称光栅刻度与常驻调谐针:画布在 handoff 时把画面交过来 */
+    if (to && tickSvg) {
+      play(tickSvg, [{ opacity: 0 }, { opacity: 1 }], {
+        delay: LAND.handoff,
+        duration: LAND.fade,
+        easing: 'linear',
       });
-    } else {
-      [band, tickRow].forEach((el) => el && play(el, [{ opacity: 0 }, { opacity: getComputedStyle(el).opacity }], { delay: 300, duration: 500, easing: EASE }));
+    } else if (tickSvg) {
+      play(tickSvg, [{ opacity: 0 }, { opacity: 1 }], { delay: 300, duration: 500, easing: EASE });
+    }
+    if (pointer) {
+      play(pointer, [{ opacity: 0, translate: '-50% -5px' }, { opacity: 1, translate: '-50% 0' }], {
+        delay: LAND.handoff + 40,
+        duration: 360,
+        easing: EASE,
+      });
     }
 
-    /* 2. 谱线立杆:咔嗒之后从左到右、间隔 15ms,从发丝弦上破土长出;杆顶圆点随杆尖升起 */
+    /* 2. 2px 银盐谱线:咔嗒之后从左到右、间隔 15ms,从光栅中心对称舒张 */
     const pins = [...document.querySelectorAll<HTMLElement>('main .thermo-pin')]
       .map((el) => ({ el, x: el.getBoundingClientRect().left }))
       .sort((a, b) => a.x - b.x);
     pins.forEach(({ el }, i) => {
-      const delay = LAND.lock + 40 + Math.min(i * 15, 240);
-      const stem = el.querySelector<HTMLElement>('.thermo-stem');
-      const dot = el.querySelector<HTMLElement>('.thermo-dot');
-      const h = stem?.offsetHeight || 15;
-      if (stem) {
-        play(stem, [{ scale: '1 0' }, { scale: '1 1' }], { delay, duration: 440, easing: GROW });
-      }
-      if (dot) {
-        play(dot, [{ translate: `-50% ${h}px` }, { translate: '-50% 0' }], { delay, duration: 440, easing: GROW });
-        play(dot, [{ scale: '0.2', opacity: 0 }, { scale: '1', opacity: 1 }], { delay, duration: 280, easing: EASE });
-      }
+      const delay = LAND.lock + 30 + Math.min(i * 15, 220);
+      play(el, [{ scale: '1 0', opacity: 0 }, { scale: '1 1', opacity: 1 }], {
+        delay,
+        duration: 420,
+        easing: GROW,
+      });
     });
 
-    /* 3. 其余内容顺着基准线浮现:离线越近越早;线上方的往上浮,线下方的往下沉。
-     *    温度尺顶栏说明要等刻度交到 DOM 之后再出现 */
+    /* 3. 其余内容顺着基准线浮现:离线越近越早;线上方的往上浮,线下方的往下沉 */
     const head = document.querySelector('main .thermo-head');
+    const scaleRow = document.querySelector('main .thermo-scale');
     const blocks = [
       '.site-header',
       'main .intro > h1',
       'main .intro-sub',
       'main .intro-tags',
       'main .thermo-head',
+      'main .thermo-scale',
       'main .section-head',
       'main .entries > .entry',
       '.site-footer',
@@ -159,7 +155,10 @@ export function initIntro() {
       .filter(({ r }) => r.bottom > 0 && r.top < vh) // 视口外的不用动
       .forEach(({ el, r }) => {
         const d = (r.top + r.bottom) / 2 - baseY;
-        const delay = el === head ? LAND.handoff + 60 : LAND.lock - 40 + Math.min(260, Math.abs(d) * 0.3);
+        const delay =
+          el === head || el === scaleRow
+            ? LAND.handoff + 50
+            : LAND.lock - 40 + Math.min(260, Math.abs(d) * 0.3);
         play(el, [{ opacity: 0, translate: `0 ${d < 0 ? 10 : -10}px` }, { opacity: getComputedStyle(el).opacity, translate: '0 0' }], {
           delay,
           duration: 520,

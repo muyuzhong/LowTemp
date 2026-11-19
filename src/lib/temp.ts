@@ -27,12 +27,12 @@ export const STATUS_STATE: Record<Status, string> = {
   deprecated: '升华',
 };
 
-/** 状态对应的颜色 token — design.md §6.2 */
+/** 状态对应的颜色 token（银盐冷暖灰 Split-Tone Grey） — design.md §1 / §3 */
 export const STATUS_COLOR: Record<Status, string> = {
-  draft: 'var(--mauve)',
-  exploring: 'var(--blue)',
-  tested: 'var(--accent)',
-  stable: 'var(--teal)',
+  draft: 'var(--phase-draft)',
+  exploring: 'var(--phase-exploring)',
+  tested: 'var(--phase-tested)',
+  stable: 'var(--phase-stable)',
   deprecated: 'var(--red)',
 };
 

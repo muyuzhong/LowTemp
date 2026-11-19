@@ -1,12 +1,12 @@
 ---
-/* 低温光谱尺（ThermoStrip） — 首页的签名精密仪器（design.md §1 / §2.6）。
-   单根 1px 发丝弦 + 0.5° 矢量刻度 + 谱线立杆，顶栏在静止说明与实时游标读数间零位移切换。
-   data-max / min / majors 供首页入场的弦逐像素咬合对齐（src/scripts/intro.ts）。 */
+/* 低温光谱调谐带（ThermoStrip） — 首页的签名精密仪器（design.md §1 / §2.6）。
+   纯光栅 0.2°C 对称矢量刻度 + 2px 银盐冷暖灰无框谱线 + 常驻布劳恩三角调谐针。
+   SSR 默认停靠在最新发布文章频道，零空白顶栏、零水合跳变。
+   data-max / min / majors 与中心基准线 .thermo-band 供入场弦（src/scripts/intro.ts）逐像素咬合。 */
 import {
   tempOf,
   fmtTemp,
   STATUS_COLOR,
-  STATUS_LABEL,
   STATUS_STATE,
   THERMO_PHASES,
   THERMO_MAX,
@@ -25,7 +25,7 @@ const MIN = THERMO_MIN; // 右端 °C（冷）
 const span = MAX - MIN;
 const pos = (t: number) => ((MAX - t) / span) * 100;
 const majors = THERMO_MAJORS;
-const halfDegrees = Math.round(span * 2);
+const gratingSteps = Math.round(span / 0.2); // 20.0°C → 3.0°C 共 86 根 0.2°C 光栅线
 
 /* 按温度从暖到冷排序（20°C → 3°C），使 DOM 顺序与视觉从左到右及键盘 Tab 顺序严格一致 */
 const sorted = entries
@@ -38,7 +38,7 @@ const sorted = entries
       a.e.data.id.localeCompare(b.e.data.id)
   );
 
-/* 同温或极近温度（< 0.18°C）拆成对称双线谱（±0.12°C），避免叠成 1px，真实温度读数保持不变 */
+/* 同温或极近温度（< 0.18°C）拆成对称双线谱（±0.12°C），避免叠成单线，真实温度读数保持不变 */
 const MIN_T = MIN + 0.15;
 const MAX_T = MAX - 0.15;
 const clampT = (v: number) => Math.max(MIN_T, Math.min(MAX_T, v));
@@ -63,109 +63,149 @@ while (idx < sorted.length) {
   idx = end;
 }
 
-const pins = sorted.map(({ e, t }, i) => {
-  const x = pos(plotTemps[i]);
-  const minutes = e.data.minutes || 8;
-  const stemH = 12 + Math.min(5, Math.round(Math.sqrt(minutes)));
-  return { e, t, x, stemH };
-});
+const pins = sorted.map(({ e, t }, i) => ({
+  e,
+  t,
+  x: pos(plotTemps[i]),
+  publishedMs: e.data.published.getTime(),
+}));
 
-const presentPhases = THERMO_PHASES.filter((s) => pins.some((p) => p.e.data.status === s));
-const majorSet = new Set<number>(majors);
+/* 默认停靠在最新发布的一篇文章频道（如 LTN-032） */
+let defaultIdx = 0;
+for (let i = 1; i < pins.length; i++) {
+  if (
+    pins[i].publishedMs > pins[defaultIdx].publishedMs ||
+    (pins[i].publishedMs === pins[defaultIdx].publishedMs &&
+      pins[i].e.data.id.localeCompare(pins[defaultIdx].e.data.id) > 0)
+  ) {
+    defaultIdx = i;
+  }
+}
+const defaultPin = pins[defaultIdx];
+const phaseSet = new Set(THERMO_PHASES.filter((s) => pins.some((p) => p.e.data.status === s)));
 ---
 <div
   class="thermo"
+  style={`--pointer-x: ${defaultPin ? defaultPin.x.toFixed(4) : 50}%`}
   data-max={MAX}
   data-min={MIN}
   data-majors={majors.join(',')}
   role="group"
-  aria-label="文章温度谱"
+  aria-label="文章温度光谱调谐带"
 >
   <div class="thermo-head">
-    <div class="thermo-idle">
-      <span class="thermo-caption">
-        <span>温度谱</span><span class="thermo-caption-sub"> · 越确定，越冷</span>
-      </span>
-      {presentPhases.length > 0 && (
-        <div class="thermo-phases" role="group" aria-label="按物态浏览文章">
-          {presentPhases.map((s) => (
-            <a
-              class="thermo-phase"
-              href={`/writing/?phase=${s}`}
-              data-phase={s}
-              data-no-popover
-            >
-              <i class="temp-dot" style={`background: ${STATUS_COLOR[s]}`} aria-hidden="true"></i>{STATUS_STATE[s]}
-            </a>
-          ))}
-        </div>
-      )}
-    </div>
+    <a
+      class="thermo-readout-link"
+      href={defaultPin ? `/writing/${defaultPin.e.id}/` : '/writing/'}
+      data-no-popover
+    >
+      <span class="thermo-readout-id mono">{defaultPin?.e.data.id ?? ''}</span>
+      <span class="thermo-readout-title">{defaultPin?.e.data.title ?? ''}</span>
+      <span class="thermo-readout-arrow" aria-hidden="true">→</span>
+    </a>
 
-    <div class="thermo-readout" aria-hidden="true">
-      <span class="thermo-readout-id mono"></span>
-      <span class="thermo-readout-sep">·</span>
-      <span class="thermo-readout-title"></span>
-      <span class="thermo-readout-meta">
-        <i class="temp-dot thermo-readout-dot"></i>
-        <span class="thermo-readout-temp"></span>
+    <span class="thermo-readout-meta mono">
+      <i
+        class="temp-dot thermo-readout-dot"
+        style={`background: ${defaultPin ? STATUS_COLOR[defaultPin.e.data.status] : 'var(--phase-exploring)'}`}
+        aria-hidden="true"
+      ></i>
+      <span class="thermo-readout-temp">
+        {defaultPin ? `${STATUS_STATE[defaultPin.e.data.status]} · ${fmtTemp(defaultPin.t)}` : ''}
       </span>
-    </div>
+    </span>
   </div>
 
   <div class="thermo-track">
+    <div class="thermo-band" aria-hidden="true"></div>
+    <i class="thermo-pointer" aria-hidden="true"></i>
+    <i class="thermo-ghost" aria-hidden="true"></i>
+
+    <svg class="thermo-ticks-svg" aria-hidden="true" shape-rendering="crispEdges">
+      {Array.from({ length: gratingSteps + 1 }, (_, i) => {
+        const pct = (i / gratingSteps) * 100;
+        const isMajor = i % 20 === 0;
+        const isMid = !isMajor && i % 5 === 0;
+        const y1 = isMajor ? 6.5 : isMid ? 8.5 : 9.8;
+        const y2 = isMajor ? 21.5 : isMid ? 19.5 : 18.2;
+        return (
+          <line
+            class:list={[{ major: isMajor, mid: isMid }]}
+            x1={`${pct.toFixed(4)}%`}
+            x2={`${pct.toFixed(4)}%`}
+            y1={y1}
+            y2={y2}
+            data-tier={isMajor ? '2' : isMid ? '1' : '0'}
+          />
+        );
+      })}
+    </svg>
+
     <ul class="thermo-pins" role="list">
-      {pins.map(({ e, t, x, stemH }) => (
+      {pins.map(({ e, t, x, publishedMs }, i) => (
         <li>
           <a
-            class="thermo-pin"
+            class:list={['thermo-pin', { 'is-active': i === defaultIdx }]}
             href={`/writing/${e.id}/`}
             data-no-popover
             data-x={x.toFixed(4)}
+            data-published={String(publishedMs)}
             data-phase={e.data.status}
             data-id={e.data.id}
             data-title={e.data.title}
-            data-status-label={STATUS_LABEL[e.data.status]}
+            data-state={STATUS_STATE[e.data.status]}
             data-temp={fmtTemp(t)}
             data-color={STATUS_COLOR[e.data.status]}
-            style={`left: ${x.toFixed(4)}%; --h: ${stemH}px; --c: ${STATUS_COLOR[e.data.status]}`}
-            aria-label={`${e.data.id} ${e.data.title} · ${STATUS_LABEL[e.data.status]} ${fmtTemp(t)}`}
+            style={`left: ${x.toFixed(4)}%; --c: ${STATUS_COLOR[e.data.status]}`}
+            aria-label={`${e.data.id} ${e.data.title} · ${STATUS_STATE[e.data.status]} ${fmtTemp(t)}`}
           >
-            <i class="thermo-stem" aria-hidden="true"></i>
-            <i class="thermo-dot" aria-hidden="true"></i>
+            <i class="thermo-knockout" aria-hidden="true"></i>
+            <i class="thermo-bar" aria-hidden="true"></i>
           </a>
         </li>
       ))}
     </ul>
+  </div>
 
-    <div class="thermo-band" aria-hidden="true"></div>
+  <div class="thermo-scale">
+    <span class="thermo-scale-stop">
+      <span class="mono" aria-hidden="true">20°C</span>
+      {phaseSet.has('draft') && (
+        <a class="thermo-phase" href="/writing/?phase=draft" data-phase="draft" data-no-popover>
+          <i class="temp-dot" style={`background: ${STATUS_COLOR.draft}`} aria-hidden="true"></i>{STATUS_STATE.draft}
+        </a>
+      )}
+    </span>
 
-    <div class="thermo-ticks" aria-hidden="true">
-      <svg class="thermo-ticks-svg" aria-hidden="true" shape-rendering="crispEdges">
-        {Array.from({ length: halfDegrees + 1 }, (_, i) => {
-          const t = MAX - i * 0.5;
-          const pct = pos(t);
-          const isMajor = majorSet.has(t);
-          return (
-            <line
-              class:list={[{ major: isMajor }]}
-              x1={`${pct.toFixed(4)}%`}
-              x2={`${pct.toFixed(4)}%`}
-              y1="0"
-              y2={isMajor ? 10 : 5}
-              data-major={isMajor ? '1' : undefined}
-            />
-          );
-        })}
-      </svg>
-      {majors.map((t, i) => (
-        <span
-          class:list={['thermo-tick-label', { 'is-first': i === 0 }]}
-          style={`left: ${pos(t).toFixed(4)}%`}
-        >
-          {i === 0 ? `${t}°C` : `${t}°`}
-        </span>
-      ))}
-    </div>
+    <span class="thermo-scale-stop">
+      <span class="mono" aria-hidden="true">16°</span>
+      {phaseSet.has('exploring') && (
+        <a class="thermo-phase" href="/writing/?phase=exploring" data-phase="exploring" data-no-popover>
+          <i class="temp-dot" style={`background: ${STATUS_COLOR.exploring}`} aria-hidden="true"></i>{STATUS_STATE.exploring}
+        </a>
+      )}
+    </span>
+
+    <span class="thermo-scale-stop" aria-hidden="true">
+      <span class="mono">12°</span>
+    </span>
+
+    <span class="thermo-scale-stop">
+      <span class="mono" aria-hidden="true">8°</span>
+      {phaseSet.has('tested') && (
+        <a class="thermo-phase" href="/writing/?phase=tested" data-phase="tested" data-no-popover>
+          <i class="temp-dot" style={`background: ${STATUS_COLOR.tested}`} aria-hidden="true"></i>{STATUS_STATE.tested}
+        </a>
+      )}
+    </span>
+
+    <span class="thermo-scale-stop">
+      {phaseSet.has('stable') && (
+        <a class="thermo-phase" href="/writing/?phase=stable" data-phase="stable" data-no-popover>
+          <i class="temp-dot" style={`background: ${STATUS_COLOR.stable}`} aria-hidden="true"></i>{STATUS_STATE.stable}
+        </a>
+      )}
+      <span class="mono" aria-hidden="true">4°C</span>
+    </span>
   </div>
 </div>
