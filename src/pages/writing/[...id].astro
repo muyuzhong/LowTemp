@@ -79,7 +79,16 @@ ${entry.body || ''}
 <Base
   title={d.title}
   description={d.excerpt}
-  article={{ published: d.published, updated: d.updated, tags: d.tags }}
+  ogImage={`/og/${entry.id}.png`}
+  article={{
+    id: d.id,
+    subtitle: d.subtitle,
+    categoryLabel: CATEGORY_LABEL[d.category],
+    published: d.published,
+    updated: d.updated,
+    tags: d.tags,
+    minutes: readMinutes,
+  }}
 >
   <!-- 阅读温度计：顶部 2px 进度线 + 滚动后出现的阅读条 -->
   <div class="read-line" aria-hidden="true"></div>

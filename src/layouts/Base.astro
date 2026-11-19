@@ -12,17 +12,73 @@ import '../styles/global.css';
 interface Props {
   title: string;
   description?: string;
+  ogImage?: string;
   article?: {
+    id?: string;
+    subtitle?: string;
+    categoryLabel?: string;
     published?: Date;
     updated?: Date;
     tags?: string[];
+    minutes?: number;
   };
   /** 首页入场动画(见 Intro.astro) */
   intro?: boolean;
 }
-const { title, description = '在噪声退去之后,记录仍然成立的东西。', article, intro = false } = Astro.props;
-const canonical = new URL(Astro.url.pathname, Astro.site);
-const ogImage = new URL('/og.png', Astro.site);
+const {
+  title,
+  description = '在噪声退去之后，记录仍然成立的东西。',
+  ogImage: ogImagePath = '/og.png',
+  article,
+  intro = false,
+} = Astro.props;
+const siteOrigin = (Astro.site ?? new URL('https://blog.muyuzhong.xyz')).origin;
+const canonical = new URL(Astro.url.pathname, siteOrigin);
+const ogImage = new URL(ogImagePath, siteOrigin);
+
+const authorPerson = {
+  '@type': 'Person',
+  name: '暮羽中',
+  url: `${siteOrigin}/about/`,
+  sameAs: ['https://github.com/muyuzhong'],
+};
+
+const jsonLd = article
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      headline: title,
+      ...(article.subtitle ? { alternativeHeadline: article.subtitle } : {}),
+      ...(article.id ? { identifier: article.id } : {}),
+      description,
+      image: [ogImage.href],
+      inLanguage: 'zh-CN',
+      mainEntityOfPage: { '@type': 'WebPage', '@id': canonical.href },
+      url: canonical.href,
+      ...(article.published ? { datePublished: article.published.toISOString() } : {}),
+      dateModified: (article.updated ?? article.published)?.toISOString(),
+      ...(article.categoryLabel ? { articleSection: article.categoryLabel } : {}),
+      ...(article.tags?.length ? { keywords: article.tags.join(', ') } : {}),
+      ...(article.minutes ? { timeRequired: `PT${article.minutes}M` } : {}),
+      author: authorPerson,
+      publisher: {
+        '@type': 'Organization',
+        name: '低温笔记 LowTemp Notes',
+        url: `${siteOrigin}/`,
+        logo: { '@type': 'ImageObject', url: `${siteOrigin}/favicon.svg` },
+      },
+    }
+  : {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: '低温笔记 LowTemp Notes',
+      alternateName: 'LowTemp Notes',
+      url: `${siteOrigin}/`,
+      description,
+      inLanguage: 'zh-CN',
+      author: authorPerson,
+    };
+const jsonLdText = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
 
 /* 站内文章与项目即刻预览（hover 链接时弹出卡片）的数据 */
 const writingList = await getCollection('writing');
@@ -64,12 +120,19 @@ const postPreviews = Object.fromEntries([
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <meta property="og:type" content={article ? 'article' : 'website'} />
+    <meta property="og:locale" content="zh_CN" />
     <meta property="og:title" content={`${title} · 低温笔记`} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={`${title} · 低温笔记`} />
     <meta property="og:site_name" content="低温笔记 LowTemp Notes" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={`${title} · 低温笔记`} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
     {article && (
       <>
         <meta property="article:author" content="暮羽中" />
@@ -79,8 +142,10 @@ const postPreviews = Object.fromEntries([
       </>
     )}
     <link rel="alternate" type="application/rss+xml" title="低温笔记" href="/rss.xml" />
+    <link rel="alternate" type="text/plain" title="LLMs.txt" href="/llms.txt" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script type="application/ld+json" is:inline set:html={jsonLdText} />
     <script is:inline>
       /* 防闪烁:绘制前恢复主题;没有保存过偏好时跟随系统 */
       (function () {
