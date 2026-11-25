@@ -1,6 +1,6 @@
 import type { APIRoute, GetStaticPaths } from 'astro';
 import { getCollection } from 'astro:content';
-import { tempOf } from '../../lib/temp';
+import { resolveSiteTemps } from '../../lib/temp-resolver';
 import { renderArticleOgPng } from '../../lib/og';
 
 const calcReadingMinutes = (text: string) => {
@@ -12,19 +12,25 @@ const calcReadingMinutes = (text: string) => {
 
 export const getStaticPaths: GetStaticPaths = async () => {
   const entries = await getCollection('writing');
+  const siteTemps = await resolveSiteTemps();
   const allTextForFontSubset = entries
     .map((e) => `${e.data.title} ${e.data.subtitle || ''} ${e.data.excerpt}`)
     .join(' ');
 
   return entries.map((entry) => ({
     params: { id: entry.id },
-    props: { entry, allTextForFontSubset },
+    props: {
+      entry,
+      temp: siteTemps.getWriting(entry).temp,
+      allTextForFontSubset,
+    },
   }));
 };
 
 export const GET: APIRoute = async ({ props }) => {
-  const { entry, allTextForFontSubset } = props as {
+  const { entry, temp, allTextForFontSubset } = props as {
     entry: Awaited<ReturnType<typeof getCollection<'writing'>>>[number];
+    temp: number | null;
     allTextForFontSubset: string;
   };
   const d = entry.data;
@@ -37,7 +43,7 @@ export const GET: APIRoute = async ({ props }) => {
     excerpt: d.excerpt,
     category: d.category,
     status: d.status,
-    temp: tempOf(d.status, d.temperature),
+    temp,
     published: d.published,
     minutes,
     allTextForFontSubset,

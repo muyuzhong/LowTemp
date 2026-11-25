@@ -5,7 +5,8 @@ import SiteHeader from '../components/SiteHeader.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import CommandPalette from '../components/CommandPalette.astro';
 import Intro from '../components/Intro.astro';
-import { tempOf, STATUS_COLOR, STATUS_LABEL, fmtTemp } from '../lib/temp';
+import { STATUS_COLOR, STATUS_LABEL, fmtTemp } from '../lib/temp';
+import { resolveSiteTemps } from '../lib/temp-resolver';
 import '../styles/tokens.css';
 import '../styles/global.css';
 
@@ -83,6 +84,7 @@ const jsonLdText = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
 /* 站内文章与项目即刻预览（hover 链接时弹出卡片）的数据 */
 const writingList = await getCollection('writing');
 const projectList = await getCollection('projects');
+const siteTemps = await resolveSiteTemps();
 const postPreviews = Object.fromEntries([
   ...writingList.map((p) => [
     `/writing/${p.id}/`,
@@ -91,7 +93,7 @@ const postPreviews = Object.fromEntries([
       title: p.data.title,
       statusLabel: STATUS_LABEL[p.data.status],
       statusColor: STATUS_COLOR[p.data.status],
-      tempStr: fmtTemp(tempOf(p.data.status, p.data.temperature)),
+      tempStr: fmtTemp(siteTemps.getWriting(p).temp),
       excerpt: p.data.excerpt,
       minutes: p.data.minutes ?? 8,
     },
@@ -103,7 +105,7 @@ const postPreviews = Object.fromEntries([
       title: p.data.title,
       statusLabel: STATUS_LABEL[p.data.status],
       statusColor: STATUS_COLOR[p.data.status],
-      tempStr: fmtTemp(tempOf(p.data.status, p.data.temperature)),
+      tempStr: fmtTemp(siteTemps.getProject(p).temp),
       excerpt: p.data.subtitle || p.data.problem,
       minutes: 0,
       metaRight: p.data.state,

@@ -6,8 +6,8 @@ import {
   STATUS_STATE,
   fmtDate,
   fmtTemp,
-  tempOf,
 } from '../lib/temp';
+import { resolveSiteTemps } from '../lib/temp-resolver';
 
 export const GET: APIRoute = async ({ site }) => {
   const origin = (site ?? new URL('https://blog.muyuzhong.xyz')).origin;
@@ -15,6 +15,7 @@ export const GET: APIRoute = async ({ site }) => {
     (a, b) => b.data.published.getTime() - a.data.published.getTime()
   );
   const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+  const siteTemps = await resolveSiteTemps();
 
   const sections: string[] = [
     '# 低温笔记 LowTemp Notes — 全文语料库 (llms-full.txt)',
@@ -29,7 +30,7 @@ export const GET: APIRoute = async ({ site }) => {
 
   for (const e of writing) {
     const d = e.data;
-    const t = fmtTemp(tempOf(d.status, d.temperature));
+    const t = fmtTemp(siteTemps.getWriting(e).temp);
     sections.push(`# ${d.id} · ${d.title}`);
     if (d.subtitle) sections.push(`> ${d.subtitle}`);
     sections.push('');
@@ -57,7 +58,7 @@ export const GET: APIRoute = async ({ site }) => {
 
   for (const p of projects) {
     const d = p.data;
-    const t = fmtTemp(tempOf(d.status, d.temperature));
+    const t = fmtTemp(siteTemps.getProject(p).temp);
     sections.push(`# 项目档案 ${d.id} · ${d.title}`);
     sections.push(`> ${d.subtitle}`);
     sections.push('');

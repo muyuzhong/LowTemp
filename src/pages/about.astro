@@ -30,22 +30,35 @@ import Base from '../layouts/Base.astro';
         以及升华消失的废弃观点。这个站把内容的成熟度可视化为温度:
         <strong>越确定的思想,温度越低。</strong>
       </p>
+      <p>
+        温度不再是四个固定的静态数字,而是由<strong>物态划定温区、多维证据自动校准</strong>:
+        每个物态对应一段互不重叠的温区与基准温度,越接近结晶态热涨落越小。
+      </p>
       <table>
         <thead>
-          <tr><th>状态</th><th>物态</th><th>温度</th><th>含义</th></tr>
+          <tr><th>状态</th><th>物态</th><th>温区（基准）</th><th>含义</th></tr>
         </thead>
         <tbody>
-          <tr><td style="color: var(--phase-draft)">草稿</td><td>雾</td><td>19.5°C</td><td>尚在形成,可能随时改变</td></tr>
-          <tr><td style="color: var(--phase-exploring)">探索</td><td>液态</td><td>14.0°C</td><td>有方向的探索,未定型</td></tr>
-          <tr><td style="color: var(--phase-tested)">已验证</td><td>结晶中</td><td>8.4°C</td><td>经过项目验证,趋于稳定</td></tr>
-          <tr><td style="color: var(--phase-stable)">稳定</td><td>结晶</td><td>4.2°C</td><td>相对成熟,可依赖</td></tr>
+          <tr><td style="color: var(--phase-draft)">草稿</td><td>雾</td><td>17.0–19.8°C（18.1°C）</td><td>尚在形成,可能随时改变</td></tr>
+          <tr><td style="color: var(--phase-exploring)">探索</td><td>液态</td><td>11.0–16.8°C（14.2°C）</td><td>有方向的探索,未定型</td></tr>
+          <tr><td style="color: var(--phase-tested)">已验证</td><td>结晶中</td><td>6.6–10.8°C（9.4°C）</td><td>经过项目验证,趋于稳定</td></tr>
+          <tr><td style="color: var(--phase-stable)">稳定</td><td>结晶</td><td>3.2–6.4°C（5.4°C）</td><td>相对成熟,可依赖</td></tr>
           <tr><td style="color: var(--red)">已废弃</td><td>升华</td><td>—°C</td><td>观点已改变,仅作存档</td></tr>
         </tbody>
       </table>
       <p>
-        温度在站里有三个出口:每篇文章页头的状态栏;页脚的站点温度——
-        它是全部内容温度的中位数,随发文自动变化;以及文章页顶部那条
-        细细的阅读温度计,随着你读得越深,温度越低。
+        每篇文章完稿时,系统以所属物态的基准温度为起点,综合把握度(<code>confidence</code>)、
+        文体(<code>category</code>)与正文中的认识论结构——留有未决问题(<code>OPEN QUESTION</code>)会升温,
+        记录工程决策、失败证伪与结构图示会降温——校准出初始读数。
+        发布之后,文章仍会在温区内继续演化:被后续笔记反向引用、在日常轨迹(<a href="/log">/log</a>)中被实践提及,
+        以及随修订、相态跃迁与页边附注的积累,温度都会在当前温区内自然微调下降。
+        但自动校准绝不跨越物态边界——是否真正进入下一相态,依然由作者确认后手动变更 <code>status</code>,
+        并如实记入文末的温度史。
+      </p>
+      <p>
+        温度在站里有四个出口:每篇文章页头的状态栏与文末的校准读数;首页的温度尺;
+        页脚的站点温度——它是全部公开内容温度的中位数,随写作与演化自动变化;
+        以及文章页顶部那条细细的阅读温度计,随着你读得越深,温度越低。
         观点改变时旧文不会被删除,只会标注升华:
         知识库应该记录演化,而不是假装静止。
       </p>

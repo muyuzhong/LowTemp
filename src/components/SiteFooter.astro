@@ -1,14 +1,9 @@
 ---
-import { getCollection } from 'astro:content';
-import { siteTemp, tempOf, fmtTemp } from '../lib/temp';
+import { fmtTemp } from '../lib/temp';
+import { resolveSiteTemps } from '../lib/temp-resolver';
 
 /* 站点温度 = 全部公开内容温度中位数 */
-const writing = await getCollection('writing');
-const projects = await getCollection('projects');
-const t = siteTemp([
-  ...writing.map((e) => tempOf(e.data.status, e.data.temperature)),
-  ...projects.map((e) => tempOf(e.data.status, e.data.temperature)),
-]);
+const { median: t } = await resolveSiteTemps();
 ---
 <footer class="site-footer">
   <a class="sys-status" href="/about/#temperature" title="站点温度 = 全部公开内容温度的中位数">

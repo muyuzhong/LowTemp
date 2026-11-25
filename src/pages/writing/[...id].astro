@@ -2,8 +2,9 @@
 import { getCollection, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import {
-  fmtDate, fmtTemp, tempOf, STATUS_LABEL, STATUS_COLOR, CATEGORY_LABEL,
+  fmtDate, fmtTemp, STATUS_LABEL, STATUS_COLOR, CATEGORY_LABEL,
 } from '../../lib/temp';
+import { resolveSiteTemps } from '../../lib/temp-resolver';
 import { buildRefMap, findLogMentions, parseDailyLogs } from '../../lib/log';
 
 export async function getStaticPaths() {
@@ -18,7 +19,9 @@ export async function getStaticPaths() {
 const { entry, prev, next } = Astro.props;
 const { Content, headings } = await render(entry);
 const d = entry.data;
-const temp = tempOf(d.status, d.temperature);
+const siteTemps = await resolveSiteTemps();
+const tempInfo = siteTemps.getWriting(entry);
+const temp = tempInfo.temp;
 const h2s = headings.filter((h) => h.depth === 2);
 const parts = d.parts && d.parts.length > 1 ? d.parts : null;
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -67,7 +70,7 @@ title: "${d.title}"
 subtitle: "${d.subtitle || ''}"
 category: ${d.category}
 status: ${d.status}
-temperature: ${d.temperature ?? ''}
+temperature: ${temp != null ? temp.toFixed(1) : ''}
 published: ${d.published.toISOString().split('T')[0]}
 ${d.updated ? `updated: ${d.updated.toISOString().split('T')[0]}` : ''}
 tags: [${(d.tags || []).join(', ')}]
@@ -118,7 +121,10 @@ ${entry.body || ''}
       <div class="post-kicker">
         <span>{d.id}</span>
         <span>{CATEGORY_LABEL[d.category]}</span>
-        <a href="/about/#temperature" title="了解温度系统">
+        <a
+          href="/about/#temperature"
+          title={tempInfo.formulaText ? `温度校准：${tempInfo.formulaText}` : '了解温度系统'}
+        >
           <i class="temp-dot" style={`background: ${STATUS_COLOR[d.status]}`}></i>{STATUS_LABEL[d.status]} {fmtTemp(temp)}
         </a>
       </div>
@@ -322,10 +328,20 @@ ${entry.body || ''}
       </aside>
     )}
 
-    {d.tempLog && d.tempLog.length > 1 && (
-      <p class="temp-log">
-        温度史 — {d.tempLog.map((t) => `${fmtDate(t.date)} ${STATUS_LABEL[t.status]}`).join(' → ')}
-      </p>
+    {(tempInfo.formulaText || (d.tempLog && d.tempLog.length > 1)) && (
+      <div class="temp-log">
+        {tempInfo.formulaText && (
+          <p class="temp-cal">
+            温度校准 — {tempInfo.formulaText}
+            {tempInfo.nearTransition && <span class="temp-cal-hint"> · 临近相变阈值</span>}
+          </p>
+        )}
+        {d.tempLog && d.tempLog.length > 1 && (
+          <p>
+            温度史 — {d.tempLog.map((t) => `${fmtDate(t.date)} ${STATUS_LABEL[t.status]}`).join(' → ')}
+          </p>
+        )}
+      </div>
     )}
 
     {logMentions.length > 0 && (

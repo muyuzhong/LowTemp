@@ -4,7 +4,6 @@
    SSR 默认停靠在最新发布文章频道，零空白顶栏、零水合跳变。
    data-max / min / majors 与中心基准线 .thermo-band 供入场弦（src/scripts/intro.ts）逐像素咬合。 */
 import {
-  tempOf,
   fmtTemp,
   STATUS_COLOR,
   STATUS_STATE,
@@ -12,13 +11,17 @@ import {
   THERMO_MAX,
   THERMO_MIN,
   THERMO_MAJORS,
+  type TempBreakdown,
 } from '../lib/temp';
+import { resolveSiteTemps } from '../lib/temp-resolver';
 import type { CollectionEntry } from 'astro:content';
 
 interface Props {
   entries: CollectionEntry<'writing'>[];
+  temps?: Map<string, TempBreakdown>;
 }
-const { entries } = Astro.props;
+const { entries, temps } = Astro.props;
+const siteTemps = temps ? null : await resolveSiteTemps();
 
 const MAX = THERMO_MAX; // 左端 °C（暖）
 const MIN = THERMO_MIN; // 右端 °C（冷）
@@ -29,7 +32,10 @@ const gratingSteps = Math.round(span / 0.2); // 20.0°C → 3.0°C 共 86 根 0.
 
 /* 按温度从暖到冷排序（20°C → 3°C），使 DOM 顺序与视觉从左到右及键盘 Tab 顺序严格一致 */
 const sorted = entries
-  .map((e) => ({ e, t: tempOf(e.data.status, e.data.temperature) }))
+  .map((e) => ({
+    e,
+    t: temps ? (temps.get(e.id)?.temp ?? null) : siteTemps!.getWriting(e).temp,
+  }))
   .filter((x): x is { e: CollectionEntry<'writing'>; t: number } => x.t != null)
   .sort(
     (a, b) =>

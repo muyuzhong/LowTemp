@@ -1418,7 +1418,9 @@ a.log-ref { font-family: var(--font-mono); font-size: 0.9em; letter-spacing: 0.0
 .notes li { padding: 10px 0; }
 .notes li span { display: block; font-family: var(--font-sans); font-size: 14px; letter-spacing: 0; color: var(--ink-2); }
 .notes li p { font-size: 15.5px; line-height: 1.85; color: var(--ink-1); }
-.temp-log { margin-top: 40px; font-family: var(--font-sans); font-size: 14px; letter-spacing: 0; color: var(--ink-2); line-height: 1.9; }
+.temp-log { margin-top: 40px; font-family: var(--font-sans); font-size: 14px; letter-spacing: 0; color: var(--ink-2); line-height: 1.9; font-variant-numeric: tabular-nums; }
+.temp-log p + p { margin-top: 4px; }
+.temp-cal-hint { color: var(--ink-1); }
 
 .connected { margin-top: 64px; }
 .connected li + li { margin-top: 14px; }

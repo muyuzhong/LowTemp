@@ -4,7 +4,6 @@ title: 上下文换窗：工作记忆与持久层的解耦
 subtitle: 从 Codex 的 new_context 到长程 Agent 的控制流重构
 category: research
 status: tested
-temperature: 7.4
 confidence: 高
 scope: 上下文工程
 tags: [context, agent, codex, engineering, llm]

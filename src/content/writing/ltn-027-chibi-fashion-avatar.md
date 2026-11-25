@@ -4,7 +4,6 @@ title: 一个想法：Q 版穿搭小人与原型踩坑记录
 subtitle: 关于数据捏人、淘宝衣服搭配，以及 Opus 5.5 与 3D 管线碰壁的阶段性记录
 category: engineering
 status: draft
-temperature: 17.8
 confidence: 中
 scope: 产品设想 / 原型实验
 tags: [avatar, fashion, prototype, llm, idea]

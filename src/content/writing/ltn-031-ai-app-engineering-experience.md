@@ -4,7 +4,6 @@ title: "浅谈AI应用和AI开发的工程经验"
 subtitle: "从大模型赋能传统工具的起起落落，聊到确定性边界、成本账与迟迟未至的 AI Native"
 category: reflection
 status: exploring
-temperature: 16.5
 confidence: 中
 scope: AI 应用工程
 published: 2026-11-16

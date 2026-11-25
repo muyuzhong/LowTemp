@@ -1,5 +1,6 @@
 import { getCollection } from 'astro:content';
-import { fmtTemp, tempOf, STATUS_LABEL, CATEGORY_LABEL } from '../lib/temp';
+import { fmtTemp, STATUS_LABEL, CATEGORY_LABEL } from '../lib/temp';
+import { resolveSiteTemps } from '../lib/temp-resolver';
 import { buildRefMap, parseDailyLogs } from '../lib/log';
 
 export async function GET() {
@@ -7,10 +8,11 @@ export async function GET() {
   const projects = await getCollection('projects');
   const log = await getCollection('log');
   const dailyLogs = parseDailyLogs(log, buildRefMap(writing, projects));
+  const siteTemps = await resolveSiteTemps();
 
   const items = [
     ...writing.map((w) => {
-      const temp = tempOf(w.data.status, w.data.temperature);
+      const temp = siteTemps.getWriting(w).temp;
       return {
         type: 'writing',
         id: w.data.id,
@@ -28,7 +30,7 @@ export async function GET() {
       };
     }),
     ...projects.map((p) => {
-      const temp = tempOf(p.data.status, p.data.temperature);
+      const temp = siteTemps.getProject(p).temp;
       return {
         type: 'project',
         id: p.data.id,

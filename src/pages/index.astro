@@ -3,10 +3,12 @@ import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import ArchiveItem from '../components/ArchiveItem.astro';
 import ThermoStrip from '../components/ThermoStrip.astro';
+import { resolveSiteTemps } from '../lib/temp-resolver';
 
 const writing = (await getCollection('writing')).sort(
   (a, b) => b.data.published.getTime() - a.data.published.getTime()
 );
+const siteTemps = await resolveSiteTemps();
 const latest = writing.slice(0, 8);
 ---
 <Base title="首页" intro>
@@ -14,7 +16,7 @@ const latest = writing.slice(0, 8);
     <h1>低温笔记</h1>
     <p class="intro-sub">在噪声退去之后，<br />记录仍然成立的东西。</p>
     <p class="intro-tags">Agent 工程 · Coding Agent · RAG · 系统</p>
-    <ThermoStrip entries={writing} />
+    <ThermoStrip entries={writing} temps={siteTemps.writing} />
   </section>
 
   <section class="section">
@@ -23,7 +25,7 @@ const latest = writing.slice(0, 8);
       {writing.length > latest.length && <a class="section-more" href="/writing/">全部 {writing.length} 篇</a>}
     </header>
     <ul class="entries">
-      {latest.map((e) => <ArchiveItem entry={e} />)}
+      {latest.map((e) => <ArchiveItem entry={e} resolvedTemp={siteTemps.getWriting(e).temp} />)}
     </ul>
   </section>
 </Base>

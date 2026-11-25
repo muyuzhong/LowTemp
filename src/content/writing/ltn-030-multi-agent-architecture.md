@@ -4,7 +4,6 @@ title: 解构 Multi-Agent：从九大拓扑、单主循环收敛到 Super-Agent 
 subtitle: 为什么盲目拆分的多智能体常跑不过单循环？兼析 DeepSeek Super-Agent 的五层架构与三大前沿破局方案
 category: research
 status: tested
-temperature: 9.5
 confidence: 高
 scope: Agent 架构 / 上下文工程
 tags: [multi-agent, context, architecture, super-agent]

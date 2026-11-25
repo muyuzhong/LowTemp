@@ -1,11 +1,16 @@
 ---
-import { fmtDate, fmtTemp, tempOf, STATUS_COLOR, STATUS_LABEL, CATEGORY_LABEL } from '../lib/temp';
+import { fmtDate, fmtTemp, STATUS_COLOR, STATUS_LABEL, CATEGORY_LABEL } from '../lib/temp';
+import { resolveSiteTemps } from '../lib/temp-resolver';
 import type { CollectionEntry } from 'astro:content';
 
-interface Props { entry: CollectionEntry<'writing'> }
-const { entry } = Astro.props;
+interface Props {
+  entry: CollectionEntry<'writing'>;
+  resolvedTemp?: number | null;
+}
+const { entry, resolvedTemp } = Astro.props;
 const d = entry.data;
-const temp = tempOf(d.status, d.temperature);
+const temp =
+  resolvedTemp !== undefined ? resolvedTemp : (await resolveSiteTemps()).getWriting(entry).temp;
 const deprecated = d.status === 'deprecated';
 ---
 <li class="entry" data-nav-item data-category={d.category} data-status={d.status}>

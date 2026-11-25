@@ -7,8 +7,8 @@ import {
   STATUS_LABEL,
   STATUS_STATE,
   fmtTemp,
-  tempOf,
 } from '../lib/temp';
+import { resolveSiteTemps } from '../lib/temp-resolver';
 
 function escapeHtml(str: string): string {
   return str
@@ -52,11 +52,12 @@ export async function GET(context: APIContext) {
   const writing = (await getCollection('writing')).sort(
     (a, b) => b.data.published.getTime() - a.data.published.getTime()
   );
+  const siteTemps = await resolveSiteTemps();
 
   const items = await Promise.all(
     writing.map(async (e) => {
       const d = e.data;
-      const temp = tempOf(d.status, d.temperature);
+      const temp = siteTemps.getWriting(e).temp;
       const { Content } = await render(e);
       const rendered = await container.renderToString(Content);
       const bodyHtml = normalizeRssHtml(rendered, siteOrigin, d.parts);
