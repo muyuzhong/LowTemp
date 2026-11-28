@@ -19,23 +19,35 @@ syllabus:
   - chapter: 1
     label: "CH.01"
     title: "复杂度的本质与“战术龙卷风”的算力通胀"
-    subtitle: "读第 1–3 章：复杂度的三大症状、两大根因，以及为什么大模型天生是一台每秒百 Token 的战术龙卷风"
+    subtitle: "读第 1–3 章（绪论 / 复杂度的本质 / 能跑的代码是不够的）：复杂度的三大症状、两大根因，以及为什么大模型天生是每秒百 Token 的战术龙卷风"
   - chapter: 2
     label: "CH.02"
     title: "深模块（Deep Modules）与信息隐藏：为人类与 Agent 划定上下文防火墙"
-    subtitle: "读第 4–7 章：窄接口如何同时降低人脑认知负荷与 Coding Agent 的 Context Rot"
+    subtitle: "读第 4–5 章（模块应该深 / 信息隐藏与泄漏）：窄接口如何同时降低人脑认知负荷与 Agent 的 Context Rot，以及警惕 AI 最爱犯的“时间分解”"
   - chapter: 3
     label: "CH.03"
-    title: "复杂度的下沉与异常消解：反击 AI 的“过度防御癖”"
-    subtitle: "读第 8–10 章：Pull Complexity Downwards，以及为什么把异常定义出存在比满屏 try-catch 更重要"
+    title: "通用抽象与层级穿透：清理 AI 代码里的“二传手”"
+    subtitle: "读第 6–7 章（通用模块更深 / 不同的层，不同的抽象）：用恰当的通用性把特判分支挤出主干，识别并砍掉模型爱生成的透传方法（Pass-Through）与冗余 Wrapper"
   - chapter: 4
     label: "CH.04"
-    title: "零边际成本的“设计两次（Design It Twice）”与注释的新使命"
-    subtitle: "读第 11–17 章：在 AI 时代用五分钟生成三种正交方案做架构裁决，把注释写成跨会话的上下文锚点"
+    title: "复杂度下沉与模块分合：谁该替系统背负脏活？"
+    subtitle: "读第 8–9 章（将复杂度向下拉 / 合在一起还是分开）：宁可底层实现吃苦也别向调用方甩锅或乱开配置项，重新审视代码拆分与合并的真实边界"
   - chapter: 5
     label: "CH.05"
-    title: "代码演进与 AI 时代的 Red Flags（坏味道）降熵清单"
-    subtitle: "读第 18–21 章：将书末经典坏味道改造为可直接落地 AGENTS.md 与分层 Review 的工程标尺"
+    title: "把异常定义出存在 & 零边际成本的“设计两次”"
+    subtitle: "读第 10–11 章（把异常定义出存在 / 设计两次）：正面反击 AI 满屏 try-catch 与判空的“过度防御癖”，用五分钟生成正交方案落地 Design It Twice"
+  - chapter: 6
+    label: "CH.06"
+    title: "注释与命名的新使命：写给下一轮空上下文 Agent 的契约锚点"
+    subtitle: "读第 12–15 章（为什么写注释 / 描述不明显之处 / 选个好名字 / 先写注释）：砍掉复述代码的废话注释，把跨模块不变式与“为什么不选方案 A”留在代码现场"
+  - chapter: 7
+    label: "CH.07"
+    title: "代码演进、一致性与显而易见性：对抗代码库的慢性熵增"
+    subtitle: "读第 16–18 章（修改既有代码 / 一致性 / 代码应该是显而易见的）：为什么把设计决策藏在 PR 描述里会让下一轮 Agent 彻底失明，以及一致性如何托底多 Agent 协作"
+  - chapter: 8
+    label: "CH.08"
+    title: "审视 TDD、性能设计与 AI 时代的 Red Flags（坏味道）降熵总表"
+    subtitle: "读第 19–22 章（软件趋势 / 为性能而设计 / 决定什么重要 / 总结与坏味道）：Ousterhout 对 TDD 的批判在 AI 自嗨单测时代的应验，附可直接落地 AGENTS.md 的审查标尺"
 ---
 
 在写完 [LTN-032](/writing/ltn-032-post-coding-era/) 那篇关于“后编码时代”的迷茫，以及 [LTN-033](/writing/ltn-033-ai-coding-quality/) 里对抗 AI Slop 的工程实践后，我开始重新翻读 John Ousterhout 的《软件设计哲学》（*A Philosophy of Software Design*）。
