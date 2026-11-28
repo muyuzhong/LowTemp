@@ -9,11 +9,27 @@ import { buildRefMap, findLogMentions, parseDailyLogs } from '../../lib/log';
 
 export async function getStaticPaths() {
   const entries = await getCollection('writing');
-  const sorted = entries.sort((a, b) => a.data.published.getTime() - b.data.published.getTime());
-  return sorted.map((entry, i) => ({
-    params: { id: entry.id },
-    props: { entry, prev: sorted[i - 1], next: sorted[i + 1] },
-  }));
+  const topSorted = entries
+    .filter((e) => !e.data.seriesOf)
+    .sort((a, b) => a.data.published.getTime() - b.data.published.getTime());
+
+  return entries.map((entry) => {
+    if (entry.data.seriesOf) {
+      return {
+        params: { id: entry.id },
+        props: { entry, prev: undefined, next: undefined },
+      };
+    }
+    const topIdx = topSorted.findIndex((x) => x.id === entry.id);
+    return {
+      params: { id: entry.id },
+      props: {
+        entry,
+        prev: topIdx > 0 ? topSorted[topIdx - 1] : undefined,
+        next: topIdx >= 0 && topIdx < topSorted.length - 1 ? topSorted[topIdx + 1] : undefined,
+      },
+    };
+  });
 }
 
 const { entry, prev, next } = Astro.props;
@@ -33,12 +49,108 @@ const calcReadingMinutes = (text: string) => {
   const en = (clean.match(/[a-zA-Z0-9_\-]+/g) || []).length;
   return Math.max(1, Math.round(cjk / 350 + en / 180));
 };
-const readMinutes = d.minutes ?? (entry.body ? calcReadingMinutes(entry.body) : 8);
+const entryMinutesOf = (e: typeof entry) =>
+  e.data.minutes ?? (e.body ? calcReadingMinutes(e.body) : 8);
+const readMinutes = entryMinutesOf(entry);
 
 /* 思想脉络与双向反向链接 */
 const allWriting = await getCollection('writing');
 const allProjects = await getCollection('projects');
 const allLog = await getCollection('log');
+
+/* 系列总目录与子章节关联解算 */
+const belongsToSeries = (ch: typeof entry, hub: typeof entry) => {
+  const sOf = ch.data.seriesOf?.trim();
+  if (!sOf) return false;
+  return (
+    sOf.toUpperCase() === hub.data.id.toUpperCase() ||
+    sOf.toLowerCase() === hub.id.toLowerCase()
+  );
+};
+
+const seriesChapters = allWriting
+  .filter((w) => belongsToSeries(w, entry))
+  .sort((a, b) => (a.data.chapter ?? 999) - (b.data.chapter ?? 999) || a.id.localeCompare(b.id));
+
+const isSeriesHub = Boolean(
+  d.series || (d.syllabus && d.syllabus.length > 0) || seriesChapters.length > 0
+);
+
+const parentSeries = d.seriesOf
+  ? allWriting.find((w) => !w.data.seriesOf && belongsToSeries(entry, w))
+  : undefined;
+
+const siblingChapters = parentSeries
+  ? allWriting
+      .filter((w) => belongsToSeries(w, parentSeries))
+      .sort((a, b) => (a.data.chapter ?? 999) - (b.data.chapter ?? 999) || a.id.localeCompare(b.id))
+  : [];
+
+const curChapterIdx = parentSeries
+  ? siblingChapters.findIndex((w) => w.id === entry.id)
+  : -1;
+const curChapterNum = d.chapter ?? (curChapterIdx >= 0 ? curChapterIdx + 1 : 1);
+const curChapterLabel = d.chapterLabel || `CH.${pad2(curChapterNum)}`;
+const prevChapter = curChapterIdx > 0 ? siblingChapters[curChapterIdx - 1] : undefined;
+const nextChapter =
+  curChapterIdx >= 0 && curChapterIdx < siblingChapters.length - 1
+    ? siblingChapters[curChapterIdx + 1]
+    : undefined;
+const nextPlannedSyllabus =
+  parentSeries && !nextChapter && parentSeries.data.syllabus
+    ? parentSeries.data.syllabus.find((s) => s.chapter > curChapterNum)
+    : undefined;
+
+/* 构建系列总目录项（合并已发布章节与 syllabus 规划章节） */
+interface SeriesDirItem {
+  chapter: number;
+  label: string;
+  title: string;
+  subtitle?: string;
+  publishedEntry?: typeof entry;
+  temp?: number | null;
+  minutes?: number;
+}
+const directoryItems: SeriesDirItem[] = [];
+if (isSeriesHub) {
+  const byChapter = new Map<number, typeof entry>();
+  seriesChapters.forEach((ch, idx) => {
+    byChapter.set(ch.data.chapter ?? idx + 1, ch);
+  });
+  const usedChapters = new Set<number>();
+  if (d.syllabus && d.syllabus.length > 0) {
+    for (const item of d.syllabus) {
+      const pub = byChapter.get(item.chapter);
+      usedChapters.add(item.chapter);
+      directoryItems.push({
+        chapter: item.chapter,
+        label: pub?.data.chapterLabel || item.label || `CH.${pad2(item.chapter)}`,
+        title: pub ? pub.data.title : item.title,
+        subtitle: pub ? pub.data.subtitle || item.subtitle : item.subtitle,
+        publishedEntry: pub,
+        temp: pub ? siteTemps.getWriting(pub).temp : null,
+        minutes: pub ? entryMinutesOf(pub) : undefined,
+      });
+    }
+  }
+  seriesChapters.forEach((ch, idx) => {
+    const cNum = ch.data.chapter ?? idx + 1;
+    if (usedChapters.has(cNum)) return;
+    directoryItems.push({
+      chapter: cNum,
+      label: ch.data.chapterLabel || `CH.${pad2(cNum)}`,
+      title: ch.data.title,
+      subtitle: ch.data.subtitle,
+      publishedEntry: ch,
+      temp: siteTemps.getWriting(ch).temp,
+      minutes: entryMinutesOf(ch),
+    });
+  });
+  directoryItems.sort((a, b) => a.chapter - b.chapter);
+}
+const totalSeriesMinutes = isSeriesHub
+  ? readMinutes + seriesChapters.reduce((acc, ch) => acc + entryMinutesOf(ch), 0)
+  : readMinutes;
 const refMap = buildRefMap(allWriting, allProjects);
 const dailyLogs = parseDailyLogs(allLog, refMap);
 const logMentions = findLogMentions(dailyLogs, [d.id, entry.id]);
@@ -98,6 +210,7 @@ ${entry.body || ''}
   <div class="reading-bar" id="reading-bar" data-temp={temp ?? ''} aria-hidden="true">
     <span class="rb-title">
       <span class="mono">{d.id}</span>
+      {parentSeries && <span class="rb-part mono">{curChapterLabel}</span>}
       {parts && <span class="rb-part mono" id="rb-part-badge">PART 01/{pad2(parts.length)}</span>}
       {d.title}
     </span>
@@ -118,8 +231,50 @@ ${entry.body || ''}
   <div class="article-layout">
   <article class="content-col" id="post-col" data-archive-id={d.id}>
     <header class="post-head">
+      {parentSeries && (
+        <div class="series-banner">
+          <div class="series-banner-top">
+            <a href={`/writing/${parentSeries.id}/`} class="series-back-link">
+              <span class="mono">← {parentSeries.data.id}</span>
+              <span>返回《{parentSeries.data.title}》目录</span>
+            </a>
+            <span class="series-pos-badge mono">
+              {curChapterLabel} · 已更 {siblingChapters.length} 章
+            </span>
+          </div>
+          <details class="series-quick-toc">
+            <summary class="mono">切换章节 · 查看本系列目录（已更 {siblingChapters.length} 章）</summary>
+            <ol class="series-quick-list">
+              <li>
+                <a href={`/writing/${parentSeries.id}/`} class="series-quick-item">
+                  <span class="mono">INDEX</span>
+                  <span>系列总序与完整章节目录</span>
+                </a>
+              </li>
+              {siblingChapters.map((sib, sIdx) => {
+                const sibLabel = sib.data.chapterLabel || `CH.${pad2(sib.data.chapter ?? sIdx + 1)}`;
+                const isCur = sib.id === entry.id;
+                return (
+                  <li>
+                    <a
+                      href={`/writing/${sib.id}/`}
+                      class:list={['series-quick-item', { active: isCur }]}
+                      aria-current={isCur ? 'page' : undefined}
+                    >
+                      <span class="mono">{sibLabel}</span>
+                      <span>{sib.data.title}</span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ol>
+          </details>
+        </div>
+      )}
       <div class="post-kicker">
         <span>{d.id}</span>
+        {parentSeries && <span class="mono">{curChapterLabel}</span>}
+        {isSeriesHub && <span>连载专题</span>}
         <span>{CATEGORY_LABEL[d.category]}</span>
         <a
           href="/about/#temperature"
@@ -135,8 +290,15 @@ ${entry.body || ''}
         {d.updated && <span>更新 {fmtDate(d.updated)}</span>}
         {d.confidence && <span>置信 {d.confidence}</span>}
         {d.scope && <span>范围 {d.scope}</span>}
+        {isSeriesHub && (
+          <span>
+            已更 {seriesChapters.length} 章{directoryItems.length > seriesChapters.length ? ` / 共规划 ${directoryItems.length} 讲` : ''}
+          </span>
+        )}
         {parts && <span>共 {parts.length} 部分</span>}
-        <span id="post-read-minutes" data-total-minutes={readMinutes}>{readMinutes} 分钟阅读</span>
+        <span id="post-read-minutes" data-total-minutes={totalSeriesMinutes}>
+          {isSeriesHub && seriesChapters.length > 0 ? `全系列已更约 ${totalSeriesMinutes} 分钟阅读` : `${readMinutes} 分钟阅读`}
+        </span>
         <span id="post-readers" class="post-readers" hidden></span>
       </p>
     </header>
@@ -172,6 +334,123 @@ ${entry.body || ''}
     <div class="prose" id="prose-content">
       <Content />
     </div>
+
+    {isSeriesHub && directoryItems.length > 0 && (
+      <section class="series-dir" id="series-directory" aria-label="系列章节目录">
+        <div class="series-dir-head">
+          <div>
+            <span class="series-dir-kicker mono">SERIES DIRECTORY · 章节目录</span>
+            <h2 class="series-dir-title">章节目录与连载进度</h2>
+          </div>
+          <span class="series-dir-stat mono">
+            已更新 {seriesChapters.length} 章{directoryItems.length > seriesChapters.length ? ` / 规划 ${directoryItems.length} 讲` : ''}
+          </span>
+        </div>
+
+        <ol class="series-dir-list">
+          {directoryItems.map((item) => {
+            const pub = item.publishedEntry;
+            if (pub) {
+              const pd = pub.data;
+              return (
+                <li class="series-dir-row is-published">
+                  <a href={`/writing/${pub.id}/`} class="series-ch-card">
+                    <div class="series-ch-aside">
+                      <span class="series-ch-num mono">{item.label}</span>
+                      <time class="series-ch-date mono" datetime={pd.published.toISOString()}>
+                        {fmtDate(pd.published)}
+                      </time>
+                    </div>
+                    <div class="series-ch-main">
+                      <h3 class="series-ch-title">{pd.title}</h3>
+                      {pd.subtitle && <p class="series-ch-sub">{pd.subtitle}</p>}
+                      <p class="series-ch-excerpt">{pd.excerpt}</p>
+                      <p class="series-ch-meta">
+                        <span class="mono">{pd.id}</span>
+                        <span class="temp">
+                          <i class="temp-dot" style={`background: ${STATUS_COLOR[pd.status]}`}></i>
+                          {STATUS_LABEL[pd.status]} {fmtTemp(item.temp ?? null)}
+                        </span>
+                        {item.minutes && <span>{item.minutes} 分钟阅读</span>}
+                        <span class="series-ch-cta mono">阅读本章 →</span>
+                      </p>
+                    </div>
+                  </a>
+                </li>
+              );
+            }
+            return (
+              <li class="series-dir-row is-planned">
+                <div class="series-ch-card">
+                  <div class="series-ch-aside">
+                    <span class="series-ch-num mono">{item.label}</span>
+                    <span class="series-ch-date mono">待读 / 待更</span>
+                  </div>
+                  <div class="series-ch-main">
+                    <h3 class="series-ch-title">{item.title}</h3>
+                    {item.subtitle && <p class="series-ch-sub">{item.subtitle}</p>}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+    )}
+
+    {parentSeries && (
+      <nav class="part-pager series-pager" aria-label="系列上下章导航">
+        <div class="part-pager-bar">
+          <span class="part-pager-status mono">
+            {curChapterLabel} · 本章已读完（已更 {curChapterIdx + 1} / {siblingChapters.length} 章）
+          </span>
+          <a href={`/writing/${parentSeries.id}/#series-directory`} class="series-dir-jump mono">
+            ↑ 返回《{parentSeries.data.title}》章节目录
+          </a>
+        </div>
+        <div class="part-pager-grid">
+          {prevChapter ? (
+            <a href={`/writing/${prevChapter.id}/`} class="part-pager-card prev">
+              <span class="part-pager-dir mono">
+                ← 上一章 · {prevChapter.data.chapterLabel || `CH.${pad2(prevChapter.data.chapter ?? curChapterIdx)}`}
+              </span>
+              <span class="part-pager-title">{prevChapter.data.title}</span>
+              {prevChapter.data.subtitle && <span class="part-pager-sub">{prevChapter.data.subtitle}</span>}
+            </a>
+          ) : (
+            <a href={`/writing/${parentSeries.id}/`} class="part-pager-card prev">
+              <span class="part-pager-dir mono">← 返回系列总序 · {parentSeries.data.id}</span>
+              <span class="part-pager-title">{parentSeries.data.title}</span>
+              <span class="part-pager-sub">查看全书阅读脉络与完整章节目录</span>
+            </a>
+          )}
+          {nextChapter ? (
+            <a href={`/writing/${nextChapter.id}/`} class="part-pager-card next">
+              <span class="part-pager-dir mono">
+                继续阅读下一章 · {nextChapter.data.chapterLabel || `CH.${pad2(nextChapter.data.chapter ?? curChapterIdx + 2)}`}
+                {` · 约 ${entryMinutesOf(nextChapter)} 分钟`} →
+              </span>
+              <span class="part-pager-title">{nextChapter.data.title}</span>
+              {nextChapter.data.subtitle && <span class="part-pager-sub">{nextChapter.data.subtitle}</span>}
+            </a>
+          ) : nextPlannedSyllabus ? (
+            <a href={`/writing/${parentSeries.id}/#series-directory`} class="part-pager-card next is-restart">
+              <span class="part-pager-dir mono">
+                下一章待更 · {nextPlannedSyllabus.label || `CH.${pad2(nextPlannedSyllabus.chapter)}`}（返回系列目录） ↺
+              </span>
+              <span class="part-pager-title">下章预告：{nextPlannedSyllabus.title}</span>
+              {nextPlannedSyllabus.subtitle && <span class="part-pager-sub">{nextPlannedSyllabus.subtitle}</span>}
+            </a>
+          ) : (
+            <a href={`/writing/${parentSeries.id}/#series-directory`} class="part-pager-card next is-restart">
+              <span class="part-pager-dir mono">已读完最新章节 · 返回系列总目录 ↺</span>
+              <span class="part-pager-title">{parentSeries.data.title}</span>
+              <span class="part-pager-sub">随阅读进度持续更新下一章</span>
+            </a>
+          )}
+        </div>
+      </nav>
+    )}
 
     {parts && (
       <nav class="part-pager" id="part-pager" aria-label="上下部分阅读导航">
@@ -375,24 +654,26 @@ ${entry.body || ''}
       </aside>
     )}
 
-    <nav class="post-nav" aria-label="相邻文章">
-      <div>
-        {prev && (
-          <a href={`/writing/${prev.id}/`}>
-            <span class="nav-id">← {prev.data.id}</span>
-            {prev.data.title}
-          </a>
-        )}
-      </div>
-      <div class="next">
-        {next && (
-          <a href={`/writing/${next.id}/`}>
-            <span class="nav-id">{next.data.id} →</span>
-            {next.data.title}
-          </a>
-        )}
-      </div>
-    </nav>
+    {(prev || next) && (
+      <nav class="post-nav" aria-label="相邻文章">
+        <div>
+          {prev && (
+            <a href={`/writing/${prev.id}/`}>
+              <span class="nav-id">← {prev.data.id}</span>
+              {prev.data.title}
+            </a>
+          )}
+        </div>
+        <div class="next">
+          {next && (
+            <a href={`/writing/${next.id}/`}>
+              <span class="nav-id">{next.data.id} →</span>
+              {next.data.title}
+            </a>
+          )}
+        </div>
+      </nav>
+    )}
 
     <div class="post-foot">
       <button
@@ -405,8 +686,43 @@ ${entry.body || ''}
       <a href="#post-col" id="to-top">回到顶部 ↑</a>
     </div>
   </article>
-    {h2s.length > 1 && (
+    {(h2s.length > 1 || isSeriesHub || parentSeries) && (
       <nav class="outline" id="outline" aria-label="目录">
+        {isSeriesHub && seriesChapters.length > 0 && (
+          <div class="outline-parts">
+            <p class="outline-title">已更章节</p>
+            <a href="#series-directory" class="outline-part-link active">
+              <span class="mono">DIR</span> 章节总目录 ({seriesChapters.length})
+            </a>
+            {seriesChapters.map((ch, idx) => {
+              const lbl = ch.data.chapterLabel || `CH.${pad2(ch.data.chapter ?? idx + 1)}`;
+              return (
+                <a href={`/writing/${ch.id}/`} class="outline-part-link">
+                  <span class="mono">{lbl}</span> {ch.data.title.split(/[：—]/)[0].trim()}
+                </a>
+              );
+            })}
+          </div>
+        )}
+        {parentSeries && siblingChapters.length > 0 && (
+          <div class="outline-parts">
+            <p class="outline-title">系列目录</p>
+            <a href={`/writing/${parentSeries.id}/`} class="outline-part-link">
+              <span class="mono">DIR</span> 系列总序与目录
+            </a>
+            {siblingChapters.map((sib, idx) => {
+              const lbl = sib.data.chapterLabel || `CH.${pad2(sib.data.chapter ?? idx + 1)}`;
+              return (
+                <a
+                  href={`/writing/${sib.id}/`}
+                  class:list={['outline-part-link', { active: sib.id === entry.id }]}
+                >
+                  <span class="mono">{lbl}</span> {sib.data.title.split(/[：—]/)[0].trim()}
+                </a>
+              );
+            })}
+          </div>
+        )}
         {parts && (
           <div class="outline-parts" id="outline-parts">
             <p class="outline-title">篇章</p>
@@ -421,10 +737,16 @@ ${entry.body || ''}
             ))}
           </div>
         )}
-        <p class="outline-title" id="outline-sec-title">{parts ? '本篇目录' : '目录'}</p>
-        {h2s.map((h) => (
-          <a href={`#${h.slug}`} data-slug={h.slug}>{h.text}</a>
-        ))}
+        {h2s.length > 1 && (
+          <>
+            <p class="outline-title" id="outline-sec-title">
+              {parts ? '本篇目录' : parentSeries ? '本章目录' : isSeriesHub ? '总序目录' : '目录'}
+            </p>
+            {h2s.map((h) => (
+              <a href={`#${h.slug}`} data-slug={h.slug}>{h.text}</a>
+            ))}
+          </>
+        )}
       </nav>
     )}
   </div>

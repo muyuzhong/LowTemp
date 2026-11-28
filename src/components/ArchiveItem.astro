@@ -6,12 +6,14 @@ import type { CollectionEntry } from 'astro:content';
 interface Props {
   entry: CollectionEntry<'writing'>;
   resolvedTemp?: number | null;
+  chapterCount?: number;
 }
-const { entry, resolvedTemp } = Astro.props;
+const { entry, resolvedTemp, chapterCount } = Astro.props;
 const d = entry.data;
 const temp =
   resolvedTemp !== undefined ? resolvedTemp : (await resolveSiteTemps()).getWriting(entry).temp;
 const deprecated = d.status === 'deprecated';
+const isSeries = Boolean(d.series || (d.syllabus && d.syllabus.length > 0) || (chapterCount && chapterCount > 0));
 ---
 <li class="entry" data-nav-item data-category={d.category} data-status={d.status}>
   <a href={`/writing/${entry.id}/`}>
@@ -22,6 +24,11 @@ const deprecated = d.status === 'deprecated';
       <p class="entry-meta">
         <span>{d.id}</span>
         <span>{CATEGORY_LABEL[d.category]}</span>
+        {isSeries && (
+          <span class="entry-series-tag">
+            连载目录{chapterCount ? ` · 已更 ${chapterCount} 章` : ''}
+          </span>
+        )}
         <span class="temp"><i class="temp-dot" style={`background: ${STATUS_COLOR[d.status]}`}></i>{STATUS_LABEL[d.status]} {fmtTemp(temp)}</span>
       </p>
     </div>

@@ -571,7 +571,7 @@ function main() {
       logMentions,
     });
 
-    return { code, slug: w.id, title: d.title || w.id, res };
+    return { code, slug: w.id, title: d.title || w.id, seriesOf: d.seriesOf || null, res };
   });
 
   const projectRows = projects
@@ -597,7 +597,7 @@ function main() {
     });
 
   const median = siteTemp([
-    ...writingRows.map((r) => r.res.temp),
+    ...writingRows.filter((r) => !r.seriesOf).map((r) => r.res.temp),
     ...projectRows.map((r) => r.res.temp),
   ]);
 

@@ -5,9 +5,16 @@ import ArchiveItem from '../../components/ArchiveItem.astro';
 import { CATEGORY_LABEL, STATUS_LABEL, STATUS_COLOR, type Status } from '../../lib/temp';
 import { resolveSiteTemps } from '../../lib/temp-resolver';
 
-const entries = (await getCollection('writing')).sort(
-  (a, b) => b.data.published.getTime() - a.data.published.getTime()
-);
+const allEntries = await getCollection('writing');
+const entries = allEntries
+  .filter((e) => !e.data.seriesOf)
+  .sort((a, b) => b.data.published.getTime() - a.data.published.getTime());
+const chapterCountMap = new Map<string, number>();
+for (const w of allEntries) {
+  if (!w.data.seriesOf) continue;
+  const key = w.data.seriesOf.toUpperCase();
+  chapterCountMap.set(key, (chapterCountMap.get(key) ?? 0) + 1);
+}
 const siteTemps = await resolveSiteTemps();
 const cats = Object.keys(CATEGORY_LABEL);
 
@@ -43,7 +50,13 @@ const phases = (['stable', 'tested', 'exploring', 'draft', 'deprecated'] as Stat
   </div>
 
   <ul class="entries" id="archive">
-    {entries.map((e) => <ArchiveItem entry={e} resolvedTemp={siteTemps.getWriting(e).temp} />)}
+    {entries.map((e) => (
+      <ArchiveItem
+        entry={e}
+        resolvedTemp={siteTemps.getWriting(e).temp}
+        chapterCount={chapterCountMap.get(e.data.id.toUpperCase())}
+      />
+    ))}
   </ul>
   <p id="empty-state" class="empty" hidden>所选主题与物态的交集下暂无记录。</p>
 

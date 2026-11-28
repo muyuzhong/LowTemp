@@ -58,6 +58,23 @@ const writing = defineCollection({
       .nullable()
       .optional()
       .transform((v) => v ?? undefined),
+    /* 系列连载支持：主目录贴设置 series: true（或 syllabus），子章节贴设置 seriesOf: "LTN-xxx" 与 chapter: 1 */
+    series: z.boolean().default(false),
+    seriesOf: optStr,
+    chapter: optNum,
+    chapterLabel: optStr,
+    syllabus: z
+      .array(
+        z.object({
+          chapter: z.number(),
+          label: optStr,
+          title: z.string(),
+          subtitle: optStr,
+        })
+      )
+      .nullable()
+      .optional()
+      .transform((v) => v ?? undefined),
   }),
 });
 

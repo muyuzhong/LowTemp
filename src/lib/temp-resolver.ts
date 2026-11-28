@@ -81,7 +81,7 @@ async function computeSiteTemps(): Promise<SiteTempMap> {
   }
 
   const median = siteTemp([
-    ...[...writingMap.values()].map((b) => b.temp),
+    ...writing.filter((w) => !w.data.seriesOf).map((w) => writingMap.get(w.id)?.temp ?? null),
     ...[...projectMap.values()].map((b) => b.temp),
   ]);
 

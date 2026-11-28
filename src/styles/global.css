@@ -521,6 +521,7 @@ span.section-more { text-decoration: none; }
 .entry-meta { display: flex; flex-wrap: wrap; align-items: center; margin-top: 8px; font-size: 13.5px; line-height: 1.6; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .entry-meta > * + *::before { content: "·"; margin: 0 0.65em; opacity: 0.6; }
 .entry-meta .temp { color: var(--ink-1); }
+.entry-series-tag { color: var(--accent); font-weight: 500; }
 .entry.is-selected a::before { content: ""; position: absolute; left: -18px; top: 8px; bottom: 8px; width: 2px; border-radius: 2px; background: var(--accent); }
 @media (max-width: 720px) {
   .entry a { grid-template-columns: 1fr; gap: 0; }
@@ -1131,6 +1132,238 @@ a.log-ref { font-family: var(--font-mono); font-size: 0.9em; letter-spacing: 0.0
     padding-left: 16px;
     border-right: 0;
     border-left: 2px solid var(--accent);
+  }
+}
+
+/* ---------- 系列专题总览目录（Series Directory）与单章顶部导航 ---------- */
+.series-banner {
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--accent);
+  border-radius: 6px;
+  background: var(--bg-1);
+}
+.series-banner-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.series-back-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-0);
+  transition: color 160ms;
+}
+.series-back-link .mono {
+  color: var(--accent);
+}
+.series-back-link:hover {
+  color: var(--accent);
+}
+.series-pos-badge {
+  color: var(--ink-2);
+  font-size: 11.5px;
+}
+.series-quick-toc {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+.series-quick-toc summary {
+  cursor: pointer;
+  color: var(--ink-2);
+  font-size: 11.5px;
+  list-style: none;
+  user-select: none;
+  transition: color 160ms;
+}
+.series-quick-toc summary::-webkit-details-marker { display: none; }
+.series-quick-toc summary::after { content: " ↓"; }
+.series-quick-toc[open] summary::after { content: " ↑"; }
+.series-quick-toc summary:hover { color: var(--ink-0); }
+.series-quick-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+.series-quick-item {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 14px;
+  color: var(--ink-1);
+  transition: color 160ms;
+}
+.series-quick-item .mono {
+  color: var(--ink-2);
+  font-size: 11.5px;
+}
+.series-quick-item:hover {
+  color: var(--ink-0);
+}
+.series-quick-item.active {
+  color: var(--accent);
+  font-weight: 500;
+}
+.series-quick-item.active .mono {
+  color: var(--accent);
+}
+
+.series-dir {
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 72px;
+}
+.series-dir-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 28px;
+}
+.series-dir-kicker {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--accent);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+}
+.series-dir-title {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink-0);
+}
+.series-dir-stat {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.series-dir-list {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--line-soft);
+}
+.series-dir-row {
+  border-bottom: 1px solid var(--line-soft);
+}
+.series-ch-card {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 6px 28px;
+  padding: 24px 0;
+  transition: color 160ms;
+}
+.series-ch-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 3px;
+}
+.series-ch-num {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+}
+.series-ch-date {
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.series-ch-title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink-0);
+  transition: color 160ms;
+}
+.series-dir-row.is-published .series-ch-card:hover .series-ch-title {
+  color: var(--accent);
+}
+.series-ch-sub {
+  margin-top: 4px;
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--ink-1);
+}
+.series-ch-excerpt {
+  margin-top: 10px;
+  font-size: 14.5px;
+  line-height: 1.8;
+  color: var(--ink-2);
+}
+.series-ch-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.series-ch-meta > * + *::before {
+  content: "·";
+  margin: 0 0.65em;
+  opacity: 0.6;
+}
+.series-ch-meta .temp {
+  color: var(--ink-1);
+}
+.series-ch-cta {
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 12px;
+}
+.series-ch-cta::before {
+  display: none !important;
+}
+.series-dir-row.is-planned .series-ch-card {
+  padding: 16px 0;
+  opacity: 0.62;
+}
+.series-dir-row.is-planned .series-ch-num {
+  color: var(--ink-2);
+}
+.series-dir-row.is-planned .series-ch-title {
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--ink-1);
+}
+.series-dir-row.is-planned .series-ch-sub {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.series-dir-jump {
+  color: var(--ink-1);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 4px;
+  transition: color 160ms, text-decoration-color 160ms;
+}
+.series-dir-jump:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+@media (max-width: 680px) {
+  .series-ch-card {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .series-ch-aside {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
   }
 }
 

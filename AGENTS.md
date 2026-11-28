@@ -9,6 +9,7 @@
 - **文章**（`src/content/writing/`）：
   - 先检查 `src/content/writing/` 当前最大 `LTN-xxx` 编号并加一，严禁与已有编号重复。
   - 文件名统一为 `ltn-xxx-english-slug.md`（决定线上 URL `/writing/ltn-xxx-english-slug/`）。
+  - **连载系列（读一章写一章）**：系列总序文件设 `series: true`（可选 `syllabus` 预置章节规划），各章作为独立 `.md` 放入同名子目录 `src/content/writing/ltn-xxx-slug/ch01-....md`，并在 frontmatter 填 `id: LTN-xxx-01`、`seriesOf: LTN-xxx`、`chapter: 1`。子章节不会刷屏首页与 `/writing/` 主列表，点击系列主入口即可进入章节目录级。
 - **项目**（`src/content/projects/`）：
   - 编号 `LAB-xxx`（最大编号加一），文件名 `lab-xxx-english-slug.md`。
 - **日志**（`src/content/log/`）：

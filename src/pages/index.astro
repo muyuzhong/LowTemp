@@ -5,9 +5,16 @@ import ArchiveItem from '../components/ArchiveItem.astro';
 import ThermoStrip from '../components/ThermoStrip.astro';
 import { resolveSiteTemps } from '../lib/temp-resolver';
 
-const writing = (await getCollection('writing')).sort(
-  (a, b) => b.data.published.getTime() - a.data.published.getTime()
-);
+const allWriting = await getCollection('writing');
+const writing = allWriting
+  .filter((w) => !w.data.seriesOf)
+  .sort((a, b) => b.data.published.getTime() - a.data.published.getTime());
+const chapterCountMap = new Map<string, number>();
+for (const w of allWriting) {
+  if (!w.data.seriesOf) continue;
+  const key = w.data.seriesOf.toUpperCase();
+  chapterCountMap.set(key, (chapterCountMap.get(key) ?? 0) + 1);
+}
 const siteTemps = await resolveSiteTemps();
 const latest = writing.slice(0, 8);
 ---
@@ -25,7 +32,13 @@ const latest = writing.slice(0, 8);
       {writing.length > latest.length && <a class="section-more" href="/writing/">全部 {writing.length} 篇</a>}
     </header>
     <ul class="entries">
-      {latest.map((e) => <ArchiveItem entry={e} resolvedTemp={siteTemps.getWriting(e).temp} />)}
+      {latest.map((e) => (
+        <ArchiveItem
+          entry={e}
+          resolvedTemp={siteTemps.getWriting(e).temp}
+          chapterCount={chapterCountMap.get(e.data.id.toUpperCase())}
+        />
+      ))}
     </ul>
   </section>
 </Base>
