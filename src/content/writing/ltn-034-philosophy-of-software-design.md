@@ -40,14 +40,14 @@ syllabus:
 
 在写完 [LTN-032](/writing/ltn-032-post-coding-era/) 那篇关于“后编码时代”的迷茫，以及 [LTN-033](/writing/ltn-033-ai-coding-quality/) 里对抗 AI Slop 的工程实践后，我开始重新翻读 John Ousterhout 的《软件设计哲学》（*A Philosophy of Software Design*）。
 
-读这本书的契机很直接：当日常开发中 80% 甚至 90% 的具体代码都已经交给 Coding Agent 生成时，过去那些教你“怎么背熟语法糖”、“怎么手写某种设计模式样板”的编程书迅速失去了现场感；唯独这本从头到尾只死磕一件事——**“如何识别并降低软件系统的复杂度”**——的小册子，在 AI 时代读起来反而比七八年前初版时更加刺眼。
+读这本书的契机很直接：当日常开发中 80% 甚至 90% 的具体代码都已经交给 Coding Agent 生成时，过去那些教你“怎么背熟语法糖”、“怎么手写某种设计模式样板”的编程书迅速失去了现场感；唯独这本从头到尾只死磕一件事——<strong>“如何识别并降低软件系统的复杂度”</strong>——的小册子，在 AI 时代读起来反而比七八年前初版时更加刺眼。
 
 <div class="note idea">
 <div class="note-label">CORE IDEA</div>
 
 AI 并没有消灭软件工程的复杂度，它只是抽走了“手敲代码速度”这道天然的物理阻尼器。
 
-当写出一段“能跑的代码（Working Code）”的边际成本趋近于零时，**软件设计的全部主战场，都收敛到了对系统复杂度（Complexity）的识别、隔离与减脂上**。
+当写出一段“能跑的代码（Working Code）”的边际成本趋近于零时，<strong>软件设计的全部主战场，都收敛到了对系统复杂度（Complexity）的识别、隔离与减脂上</strong>。
 
 </div>
 
@@ -97,6 +97,6 @@ AI 并没有消灭软件工程的复杂度，它只是抽走了“手敲代码�
 
 更重要的是，今天代码的“读者”变了。
 
-Ousterhout 在书里讨论“认知负荷（Cognitive Load）”时，默认的受众是人类程序员的大脑工作记忆；而在我们的日常工作流里，代码的**第一高频读者其实是上下文窗口有限的 Coding Agent**。我越读越意识到，书中用来保护人类心智的每一条设计原则——深模块（Deep Modules）、信息隐藏（Information Hiding）、把复杂度向下拉（Pull Complexity Downwards）、把异常定义出存在（Define Errors Out of Existence）——本质上都是在为 Agent 建造我在 [LTN-030](/writing/ltn-030-multi-agent-architecture/) 里提到的**“上下文防火墙”**。
+Ousterhout 在书里讨论“认知负荷（Cognitive Load）”时，默认的受众是人类程序员的大脑工作记忆；而在我们的日常工作流里，代码的**第一高频读者其实是上下文窗口有限的 Coding Agent**。我越读越意识到，书中用来保护人类心智的每一条设计原则——深模块（Deep Modules）、信息隐藏（Information Hiding）、把复杂度向下拉（Pull Complexity Downwards）、把异常定义出存在（Define Errors Out of Existence）——本质上都是在为 Agent 建造我在 [LTN-030](/writing/ltn-030-multi-agent-architecture/) 里提到的<strong>“上下文防火墙”</strong>。
 
 因此，我不打算写一篇浅尝辄止的书评，而是把这个主题单开为一个**逐章连载的读书与工程映射系列**。我读完几章、在手头的项目（如 Seamline 与 [LAB-003](/projects/#lab-003)）里印证了哪些坑，就在下方的章节目录里追加一章。
